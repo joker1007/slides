@@ -22,7 +22,7 @@
 - テストケース定義
 - テスト実行
 - マッチャ
-- Notification
+- fail\_messageの表示
 
 
 
@@ -296,6 +296,8 @@ end
 ```
 - `@example_group_instance.instance_exec(self, &@example_block)`
 - 評価コンテキストは`ExampleGroup`のインスタンス
+- テストが実行されるとインスタンスはクリアされる
+- 後から実行時の情報は取得できない
 
 
 
@@ -432,3 +434,205 @@ module ExepectationHelper
   end
 end
 ```
+
+
+
+### rspec/expectations/fail\_with.rb
+```ruby
+module RSpec
+  module Expectations
+    class << self
+      # ...
+      def fail_with(message, expected=nil, actual=nil)
+        unless message
+          raise ArgumentError, "Failure message is nil. Does your matcher define the " \
+                               "appropriate failure_message[_when_negated] method to return a string?"
+        end
+
+        diff = differ.diff(actual, expected)
+        message = "#{message}\nDiff:#{diff}" unless diff.empty?
+
+        # マッチャが失敗すると最終的にこの例外が呼ばれる
+        raise RSpec::Expectations::ExpectationNotMetError, message
+      end
+    end
+  end
+end
+```
+
+
+
+## fail\_messageの表示
+Repoter, Notification, Formatterがテスト失敗のメッセージを表示する
+
+
+
+### rspec/core/example\_group.rb
+```ruby
+def self.run(reporter)
+  # ...
+  begin
+    # ...
+  rescue Exception => ex
+    RSpec.world.wants_to_quit = true if fail_fast?
+    for_filtered_examples(reporter) { |example| example.fail_with_exception(reporter, ex) }
+
+  # ...
+end
+```
+
+### rspec/core/example.rb
+```ruby
+def fail_with_exception(reporter, exception)
+  start(reporter)
+  set_exception(exception)
+  finish(reporter)
+end
+```
+
+
+
+### rspec/core/example.rb
+```ruby
+def finish(reporter)
+  pending_message = execution_result.pending_message
+
+  if @exception
+    record_finished :failed
+    execution_result.exception = @exception
+    reporter.example_failed self
+    false
+  elsif pending_message
+    record_finished :pending
+    execution_result.pending_message = pending_message
+    reporter.example_pending self
+    true
+  else
+    record_finished :passed
+    reporter.example_passed self
+    true
+  end
+end
+```
+
+
+
+## Reporter
+### rspec/core/repoter.rb
+```ruby
+def example_failed(example)
+  @failed_examples << example
+  notify :example_failed, Notifications::ExampleNotification.for(example)
+end
+```
+
+```ruby
+def notify(event, notification)
+  registered_listeners(event).each do |formatter|
+    formatter.__send__(event, notification)
+  end
+end
+```
+- Notificationはイベントに対応した情報やメッセージを格納している箱
+- formatterはイベント名に対応したメソッドを実装しておく必要がある
+- 各テストケースの情報はnotificationを経由して取得する
+
+
+
+## Formatter
+### rspec/core/formatters/documentation_formatter.rb
+```ruby
+module RSpec
+  module Core
+    module Formatters
+      # @private
+      class DocumentationFormatter < BaseTextFormatter
+        Formatters.register self, :example_group_started, :example_group_finished,
+                            :example_passed, :example_pending, :example_failed
+
+```
+```ruby
+def example_passed(passed) # passedはNotificationのインスタンス
+  output.puts passed_output(passed.example)
+end
+```
+```ruby
+def passed_output(example)
+  ConsoleCodes.wrap("#{current_indentation}#{example.description.strip}", :success)
+end
+```
+- `Formatters.register`を呼び出して、どのイベントを受け取るかを宣言する
+- 各イベントに対応したメソッドは`Notification`のインスタンスから情報を得て、メッセージを出力したり情報を保存したりする
+
+
+
+ex. rspec_junit_formatter
+```ruby
+def example_passed(notification)
+  @example_notifications << notification
+end
+
+def example_pending(notification)
+  @example_notifications << notification
+end
+
+def example_failed(notification)
+  @example_notifications << notification
+end
+```
+
+
+
+```ruby
+def dump_summary(summary)
+  xml.instruct!
+  testsuite_options = {
+    :name => 'rspec',
+    :tests => summary.example_count,
+    :failures => summary.failure_count,
+    :errors => 0,
+    :time => '%.6f' % summary.duration,
+    :timestamp => @start.iso8601
+  }
+  xml.testsuite testsuite_options do
+    xml.properties
+    @example_notifications.each do |notification|
+      send :"dump_summary_example_#{notification.example.execution_result[:status]}", notification
+    end
+  end
+end
+```
+
+
+## カスタムFormatterを作る
+- `RSpec::Core::Formatters::BaseFormatter`を継承したクラスを作る
+- `RSpec::Formatters.register`を呼んで、対応するイベントを宣言する
+- 各イベントに対応したメソッドを定義する
+
+
+
+## まとめ
+
+
+
+### 起動
+- コマンドライン引数を元にテストケースを読み込んで`World`に登録
+
+
+
+### テストケース定義
+- `describe`の定義は`ExampleGroup`のサブクラスを定義することと同じ
+- 各テストケースは`Example`という箱に情報を保持している
+- 各テストケースのが実行される時は`ExampleGroup`のインスタンスにevalされる
+
+
+
+### マッチャ
+- アサーションは、`ExpectationTarget`に対してマッチャインスタンスの`matches?`を呼ぶ
+- マッチしない時は`RSpec::Expectations::ExpectationNotMetError`例外が発生する
+
+
+
+### メッセージの表示
+- テスト実行の各工程で`Repoter`を通じて`Formatter`に`Notification`を送る
+- 例えばテストが失敗した時は、`Formatter`がそのイベントを受け取り、`Notification`に格納された情報を元にfailure messageを表示する
