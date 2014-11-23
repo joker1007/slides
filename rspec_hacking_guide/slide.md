@@ -66,7 +66,7 @@ def self.run(args, err=$stderr, out=$stdout)
   end
 end
 ```
-ConfigurationOptionsでコマンドラインオプションをパースする
+- ConfigurationOptionsでコマンドラインオプションをパースする
 
 
 
@@ -84,9 +84,8 @@ def run(err, out)
   run_specs(@world.ordered_example_groups)
 end
 ```
-RSpec::Core::Worldはグローバルに情報を保持しておくための内部用の箱
-
-example_groupsのリストやテストケース、フィルタ情報を持っている
+- RSpec::Core::Worldはグローバルに情報を保持しておくための内部用の箱
+- example\_groupsのリストやテストケース、フィルタ情報を持っている
 
 
 
@@ -99,11 +98,10 @@ def setup(err, out)
   @world.announce_filters
 end
 ```
-RSpec::Core::Configurationに設定を保持する
-load_spec_filesでスペックを読み込み
-コマンドラインオプションで渡された読み込みパターンに沿って読み込み対象のspecファイルをloadする
-
-この時点で定義されたテストケースがRSpec::Core::Worldに登録されている
+- RSpec::Core::Configurationに設定を保持する
+- `load_spec_files`でスペックを読み込み
+- コマンドラインオプションで渡された読み込みパターンに沿って読み込み対象のspecファイルをloadする
+- この時点で定義されたテストケースがRSpec::Core::Worldに登録されている
 
 
 
@@ -120,13 +118,13 @@ def run_specs(example_groups)
   end
 end
 ```
-suite全体のhookを起動して、example_groups全てをrunしていく
-example_groupsはRSpec.worldによってフィルタと整列済みになっている
+- suite全体のhookを起動して、`example_groups`全てをrunしていく
+- `example_groups`は`RSpec.world`によってフィルタされ整列済みになっている
 
 
 
 ## テストケース定義
-RSpec::Core::Configurationがload_spec_filesを実行した時に各specファイルが実行され定義される
+`RSpec::Core::Configuration`が`load_spec_files`を実行した時に各specファイルが実行され定義される
 
 
 
