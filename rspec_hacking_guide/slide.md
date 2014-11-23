@@ -604,6 +604,7 @@ end
 ```
 
 
+
 ## カスタムFormatterを作る
 - `RSpec::Core::Formatters::BaseFormatter`を継承したクラスを作る
 - `RSpec::Formatters.register`を呼んで、対応するイベントを宣言する
