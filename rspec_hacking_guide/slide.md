@@ -30,7 +30,7 @@
 
 
 
-rspecのコマンドエンドポイント
+## rspecのコマンドエンドポイント
 ```ruby
 #!/usr/bin/env ruby
 
@@ -40,6 +40,7 @@ RSpec::Core::Runner.invoke
 
 
 
+## rspec/core/runner.rb (1)
 ```ruby
 def self.invoke
   disable_autorun!
@@ -70,6 +71,7 @@ end
 
 
 
+## rspec/core/runner.rb (2)
 ```ruby
 def initialize(options, configuration=RSpec.configuration, world=RSpec.world)
   @options       = options
@@ -89,6 +91,7 @@ end
 
 
 
+## rspec/core/runner.rb (3)
 ```ruby
 def setup(err, out)
   @configuration.error_stream = err
@@ -105,6 +108,7 @@ end
 
 
 
+## rspec/core/runner.rb (4)
 ```ruby
 def run_specs(example_groups)
   @configuration.reporter.report(@world.example_count(example_groups)) do |reporter|
@@ -128,10 +132,12 @@ end
 
 
 
-## `ExampleGroup`の定義
-```ruby
-# rspec/core/example_group.rb
+## ExampleGroupの定義
 
+
+
+## rspec/core/example_group.rb (1)
+```ruby
 def self.define_example_group_method(name, metadata={})
   define_singleton_method(name) do |*args, &example_group_block|
     # ...
@@ -154,9 +160,8 @@ end
 
 
 
+## rspec/core/example_group.rb (2)
 ```ruby
-# rspec/core/example_group.rb
-
 def self.subclass(parent, description, args, &example_group_block)
   subclass = Class.new(parent)
   subclass.set_it_up(description, *args, &example_group_block)
@@ -185,9 +190,11 @@ Refinmentが使えるし、独自のモジュールをincludeすることも
 
 
 ## 各テストケースの定義
-```ruby
-# rspec/core/example_group.rb
 
+
+
+## rspec/core/example_group.rb
+```ruby
 def self.define_example_method(name, extra_options={})
   define_singleton_method(name) do |*all_args, &block|
     desc, *args = *all_args
@@ -210,10 +217,11 @@ end
 
 
 ## テスト実行
-再掲
-```ruby
-# rspec/core/runner.rb
 
+
+
+## rspec/core/runner.rb (再)
+```ruby
 def run_specs(example_groups)
   @configuration.reporter.report(@world.example_count(example_groups)) do |reporter|
     begin
@@ -231,8 +239,8 @@ end
 
 
 
+## rspec/core/example_group.rb (1)
 ```ruby
-# rspec/core/example_group.rb
 def self.run(reporter)
   # ...
   reporter.example_group_started(self)
@@ -255,9 +263,8 @@ end
 
 
 
+## rspec/core/example_group.rb (2)
 ```ruby
-# rspec/core/example_group.rb
-
 def self.run_examples(reporter)
   ordering_strategy.order(filtered_examples).map do |example|
     next if RSpec.world.wants_to_quit
@@ -274,6 +281,7 @@ end
 
 
 
+## rspec/core/example.rb
 ```ruby
 def run(example_group_instance, reporter)
   # ...
@@ -328,8 +336,8 @@ rspec-expectationsによって定義される
 
 
 ## expect
+### rspec/expectations/syntax.rb
 ```ruby
-# rspec/expectations/syntax.rb
 def enable_expect(syntax_host=::RSpec::Matchers)
   return if expect_enabled?(syntax_host)
 
@@ -341,8 +349,8 @@ def enable_expect(syntax_host=::RSpec::Matchers)
 end
 ```
 
+### rspec/expectations/expectation_target.rb
 ```ruby
-# rspec/expectations/expectation_target.rb
 def self.for(value, block)
   if UndefinedValue.equal?(value)
     unless block
