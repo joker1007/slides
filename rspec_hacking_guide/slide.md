@@ -492,7 +492,7 @@ end
 def fail_with_exception(reporter, exception)
   start(reporter)
   set_exception(exception)
-  finish(reporter)
+  finish(reporter) # テストが終わった時のメッセージ表示
 end
 ```
 
@@ -506,7 +506,7 @@ def finish(reporter)
   if @exception
     record_finished :failed
     execution_result.exception = @exception
-    reporter.example_failed self
+    reporter.example_failed self # reporterのexample_failedを呼んで失敗したことを通知する
     false
   elsif pending_message
     record_finished :pending
