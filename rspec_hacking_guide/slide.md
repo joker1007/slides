@@ -1,4 +1,4 @@
-# 5分で
+# 20分で
 # 話せるだけ
 # 話す
 # RSpec Hacking Guide
@@ -157,6 +157,24 @@ end
 - クラスメソッドとして`ExampleGroup`を作るメソッドを定義する
 - `describe`や`xdescribe`、`context`等、複数の名前で定義するためにメソッド化している
 - テストケースの実体は`ExampleGroup`のsubclassを定義している
+- 最後に`expose_example_group_alias`でメソッドの処理をラップしてDSLにする
+
+
+## rspec/core/dsl.rb
+```ruby
+def self.expose_example_group_alias(name)
+  return if example_group_aliases.include?(name)
+
+  example_group_aliases << name
+
+  (class << RSpec; self; end).__send__(:define_method, name) do |*args, &example_group_block|
+    # 定義したExampleGroupをworldに登録している
+    RSpec.world.register RSpec::Core::ExampleGroup.__send__(name, *args, &example_group_block)
+  end
+
+  expose_example_group_alias_globally(name) if exposed_globally?
+end
+```
 
 
 
@@ -177,13 +195,29 @@ def self.subclass(parent, description, args, &example_group_block)
   subclass
 end
 ```
-- `set_it_up`メソッドでdescriptionやメタデータをクラス情報として組み込み、Worldに登録する
+- `set_it_up`メソッドでdescriptionやメタデータをクラス情報として組み込む
 - `assign_const`で動的に生成したクラス名にサブクラスを割り当てる
 - 最後に`let`や`subject`の定義場所になるモジュールをincludeさせる
 
 
 
-## `describe`の内側は単なるクラス定義
+## つまりこういう事
+
+```ruby
+RSpec.world.register class DescribeA < RSpec::Core::ExampleGroup
+  RSpec.world.register class DescribeB < DescribeA
+    # ...
+  end
+
+  # ...
+
+  self.children << DescribeB
+end
+```
+
+
+
+## `describe`は単なるクラス定義
 
 Refinmentが使えるし、独自のモジュールをincludeすることも
 
@@ -216,6 +250,26 @@ end
 
 
 
+## つまりこういう事
+```ruby
+
+RSpec.world.register class DescribeA < RSpec::Core::ExampleGroup
+  self.examples << RSpec::Core::Example.new(self, "should eq hoge") do
+    expect(a).to eq "hoge"
+  end
+
+  RSpec.world.register class DescribeB < DescribeA
+    # ...
+  end
+
+  # ...
+
+  self.children << DescribeB
+end
+```
+
+
+
 ## テスト実行
 
 
@@ -236,6 +290,7 @@ end
 ```
 
 `example_groups.map { |g| g.run(reporter) }`
+`example_groups = RSpec.world.ordered_example_groups`
 
 
 
@@ -277,7 +332,44 @@ def self.run_examples(reporter)
 end
 ```
 - 何故インスタンス変数が引き回せるのかというと、`ExampleGroup`のクラスレベルでインスタンス変数を保存しているため
+- `set_ivars`で相当無茶をしている
 - `example.run(instance, reporter)`に`ExampleGroup`のインスタンスが渡されているのがポイント
+
+
+
+## rspec/core/example_group.rb (3)
+```ruby
+# @private
+def self.store_before_context_ivars(example_group_instance)
+  # instance_variable_getで値を取得してテーブルに保存する
+  each_instance_variable_for_example(example_group_instance) do |ivar|
+    before_context_ivars[ivar] = example_group_instance.instance_variable_get(ivar)
+  end
+end
+
+# contextレベルのフックを実行する
+def self.run_before_context_hooks(example_group_instance)
+  # 親クラスのインスタンス変数をコピー
+  set_ivars(example_group_instance, superclass_before_context_ivars)
+
+  ContextHookMemoizedHash::Before.isolate_for_context_hook(example_group_instance) do
+    hooks.run(:before, :context, example_group_instance)
+  end
+ensure
+  # インスタンス変数を保存する
+  store_before_context_ivars(example_group_instance)
+end
+```
+
+
+
+## rspec/core/example_group.rb (4)
+```ruby
+# @private
+def self.set_ivars(instance, ivars)
+  ivars.each { |name, value| instance.instance_variable_set(name, value) }
+end
+```
 
 
 
@@ -463,6 +555,14 @@ module RSpec
       end
     end
   end
+end
+```
+
+
+### つまりこういう事
+```ruby
+unless RSpec::Matcher::Eq.new.match(subject, actual)
+  raise RSpec::Expectations::ExpectationNotMetError, message
 end
 ```
 
