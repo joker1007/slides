@@ -30,6 +30,8 @@
 2. Pivotal Tracker
 3. Github Issue + α
 
+後、idobataとslackを使ってます
+
 
 
 ## 人手とお金をかけたくない
@@ -45,8 +47,9 @@
 - GitHubのコミットやPRと直結
 - メンテ要因不要 (人手がかからない!!)
 - markdownによる表現力
-- emoji :sparkle: :+1:
+- emoji :sparkle: :+1: :sushi:
 - APIを利用しやすい
+- 連携サービスが豊富 (idobata,slack,airbrake)
 
 
 
