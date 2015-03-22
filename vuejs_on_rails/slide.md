@@ -37,13 +37,49 @@ Tomohiro Hashidate
 
 ## ViewModel
 
+```js
+var vm = new Vue({
+  "data": {
+    "message": "hello World"
+  }
+})
+```
+
 
 
 ## Mustacheっぽいテンプレート
 
+```html
+<div>{{message}}</div>
+```
+
 
 
 ## コンポーネント指向
+
+```js
+Vue.component("tweet", {
+  "template": '<span class="name">{{username}}</span><span class="body">{{body}}</span>'
+})
+```
+
+```js
+new Vue({
+  "el": "#tweets",
+  "data": {
+    "tweets": [
+      {"username": "joker1007", "body": "Hello"},
+      {"username": "joker1007", "body": "I love Ruby"}
+    ]
+  }
+})
+```
+
+```html
+<div id="tweets">
+  <tweet v-repeat="tweets">
+</div>
+```
 
 
 
