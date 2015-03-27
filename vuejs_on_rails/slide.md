@@ -1,7 +1,10 @@
 # Vue.js on Ruby on Rails
+![vue.png](vue.png)
+![rails.png](rails.png)
 
 Tomohiro Hashidate
 @joker1007
+
 
 
 ## 自己紹介
@@ -39,6 +42,7 @@ Tomohiro Hashidate
 
 ```js
 var vm = new Vue({
+  "el": "#hello"
   "data": {
     "message": "hello World"
   }
@@ -93,15 +97,25 @@ new Vue({
 
 ## HTMLをほぼそのまま
 ## テンプレート化できる
-### v-cloak
+### ex. v-cloak
+
+```html
+<div id="commits">
+  <ul v-repeat="commits" v-cloak>
+    <li>{{sha1}} {{comment}}</li>
+  </ul>
+</div>
+```
+
+```css
+[v-cloak] { display: none }
+```
 
 
 
 ## Vue.jsのコツ
 
-
-
-## Reactっぽいデータの流れを意識する
+### 重要なのはVM同士でデータを共有すること
 - コンポーネントツリーのルートとなる箇所が必要なデータを全て持つ
 - 同じdataオブジェクトを引き回す
 - 自分の管轄の箇所のデータを更新する
@@ -109,23 +123,29 @@ new Vue({
 
 
 
-## 重要なのはデータを共有すること
-
-
-
-## シンプルなReactとして使う
+## シンプルなReactっぽい何かとして
+![http://facebook.github.io/flux/img/flux-simple-f8-diagram-with-client-action-1300w.png](http://facebook.github.io/flux/img/flux-simple-f8-diagram-with-client-action-1300w.png)
 
 
 
 ## Routerライブラリを用意する
-- 不要なViewModelオブジェクトをちゃんと破棄する
+- page.js, director.js, etc
+- Contextの切り替えを意識する
+  - 状態を保存して復元できるように
+  - 不要なViewModelオブジェクトをちゃんと破棄する
+  - シンプルなものならpushState/popStateでも
+
+cf. [Arda - MetaFluxなフレームワークを作った - Qiita](http://qiita.com/mizchi/items/ef3ee47957e431c8be7b "Arda - MetaFluxなフレームワークを作った - Qiita")
 
 
 
-## 似非SPA
-Turbolinksでテンプレと初期データを差し替え
-Routerでディスパッチ
+## 似非SPAで手抜き
+- turbolinksでテンプレと初期データを差し替え
+- Routerでディスパッチ
+- 割と行ける気がする
+- turbolinks-3.0(not yet)のpartial replacementで……
 
 
 
 ## 小規模アプリにはVue.jsも良い
+react.jsはこれから本気出す……
