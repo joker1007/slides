@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>Slides</title>
+
+<meta name="description" content="">
+<meta name="author" content="joker1007">
+<meta name="generator" content="reveal-ck 3.3.0">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2><strong>ワークフローエンジン</strong></h2>
+
+<h1><strong>Rukawaの紹介と</strong></h1>
+
+<h1><strong>その裏側</strong></h1>
+
+<p><a href="https://github.com/joker1007" class="user-mention">@joker1007</a></p>
+
+</section>
+<section>
+
+<h2><strong>self.inspect</strong></h2>
+
+<ul>
+<li><a href="https://github.com/joker1007" class="user-mention">@joker1007</a></li>
+<li>Freelance</li>
+</ul>
+
+<p><img src="icon.jpg" alt="icon"></p>
+
+</section>
+<section>
+
+<h2><strong>バッチ処理の依存関係定義が辛い</strong></h2>
+
+</section>
+<section>
+
+<h2><strong>簡単なものだったらRakeでも</strong></h2>
+<pre><code class="ruby">namespace :batch do
+  task :job1 do
+    Job1.run
+  end
+
+  task job2: [:job1] do
+    Job2.run
+  end
+
+  task job3: [:job1] do
+    Job3.run
+  end
+
+  task Job4: [:job2, :job3] do
+    Job4.run
+  end
+end
+</code></pre>
+</section>
+<section>
+
+<h2>Rakeだと辛い点</h2>
+
+<ul>
+<li>数が増えてくると依存関係が分かり辛い</li>
+<li>並列で実行制御するのが難しい
+
+<ul>
+<li>(multitaskとかあるんだけど……)</li>
+</ul>
+</li>
+<li>定義場所を分割し辛い</li>
+<li>途中から実行を継続できない</li>
+<li>依存を無視して単独でタスクを実行できない</li>
+</ul>
+
+<p>解決するために<a href="https://github.com/joker1007/rukawa">rukawa</a>を作った</p>
+
+</section>
+<section>
+
+<h2><strong>Job定義のサンプル</strong></h2>
+<pre><code class="ruby">class SampleJob &lt; Rukawa::Job
+  def run
+    sleep rand(5)
+    ExecuteLog.store[self.class] = Time.now
+  end
+end
+
+class Job1 &lt; SampleJob
+  set_description "Job1 description body"
+end
+class Job2 &lt; SampleJob
+  def run
+    raise "job2 error"
+  end
+end
+class Job3 &lt; SampleJob
+end
+class Job4 &lt; SampleJob
+  # inherited by subclass
+  set_dependency_type :one_success
+end
+</code></pre>
+</section>
+<section>
+
+<h2><strong>JobNet定義のサンプル</strong></h2>
+<pre><code class="ruby">class SampleJobNet &lt; Rukawa::JobNet
+  class &lt;&lt; self
+    def dependencies
+      {
+        Job1 =&gt; [],
+        Job2 =&gt; [Job1], Job3 =&gt; [Job1],
+        Job4 =&gt; [Job2, Job3],
+      }
+    end
+  end
+end
+</code></pre>
+</section>
+<section>
+
+<p><strong>実行タスクと依存関係を別々に定義する</strong></p>
+
+<p><strong>定義方法はRubyのクラスを実装するだけ</strong></p>
+
+</section>
+<section>
+
+<h1>DEMO</h1>
+
+</section>
+<section>
+
+<h2><strong>大体、一週間弱で出来た</strong></h2>
+
+</section>
+<section>
+
+<h2><strong>Rukawaを支えたもの</strong></h2>
+
+<ul>
+<li>tsort</li>
+<li>concurrent-ruby</li>
+</ul>
+
+</section>
+<section>
+
+<h2>tsort</h2>
+
+<p><strong>Rubyの組み込みライブラリの一つ</strong></p>
+
+<p><strong>トポロジカルソートを行う</strong></p>
+
+<p>有向非巡回グラフ(DAG)の各ノードを線形の順序に並び替える</p>
+
+<p>要は依存関係を定義したDAGがあれば順番に並び替えられる</p>
+
+</section>
+<section>
+
+<h2><strong>tsortのサンプル</strong></h2>
+<pre><code class="ruby">require 'tsort'
+
+class Hash
+  include TSort
+  alias tsort_each_node each_key
+  def tsort_each_child(node, &amp;block)
+    fetch(node).each(&amp;block)
+  end
+end
+
+sorted = {1=&gt;[2, 3], 2=&gt;[3], 3=&gt;[], 4=&gt;[]}.tsort
+p sorted #=&gt; [3, 2, 1, 4]
+</code></pre>
+</section>
+<section>
+
+<h2><strong>tsortを使うと</strong></h2>
+
+<h2><strong>Hashから依存関係の順番が取れる</strong></h2>
+
+<p>別にHashじゃなくても良いけど</p>
+
+</section>
+<section>
+
+<h2><strong>その順番を使って</strong></h2>
+
+<h2><strong>DAGツリーを構築する</strong></h2>
+
+</section>
+<section>
+
+<h2><strong>並列実行に<a href="https://github.com/ruby-concurrency/concurrent-ruby">concurrent-ruby</a></strong></h2>
+
+<p>並列/並行処理に便利な各コンポーネントの集合</p>
+
+<ul>
+<li>Async</li>
+<li>Future
+
+<ul>
+<li>Dataflow <img class="emoji" alt=":star:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/2b50.png">
+</li>
+</ul>
+</li>
+<li>Promise</li>
+<li>ScheduledTask</li>
+<li>ThreadPool</li>
+</ul>
+
+<p>他にもカウントダウンラッチとかセマフォとか</p>
+
+<p>スレッドセーフなコレクションの実装とか</p>
+
+<p>超便利、自分でこんなの作るのは辛い</p>
+
+</section>
+<section>
+
+<h2><strong>Futureとは</strong></h2>
+
+<p>処理を非同期で実行した時の未来の結果を表すオブジェクト</p>
+<pre><code class="ruby">future = Concurrent::Future.execute { sleep 1; 42 }
+
+future.state # =&gt; :pending
+future.value(0) # =&gt; nil (まだ値が返ってきてない)
+sleep 1
+future.state # =&gt; :fulfilled
+future.value # =&gt; 42
+</code></pre>
+</section>
+<section>
+
+<h2>Dataflow</h2>
+
+<p>複数のFutureを待ち受けて、結果が揃ったら続きを実行する</p>
+<pre><code class="ruby">a = Concurrent::dataflow { 1 }
+b = Concurrent::dataflow { 2 }
+c = Concurrent::dataflow(a, b) { |av, bv| av + bv }
+</code></pre>
+</section>
+<section>
+
+<h2><strong>ThreadPoolで実行</strong></h2>
+<pre><code class="ruby">pool = Concurrent::FixedThreadPool.new(5)
+
+Concurrent.dataflow_with(pool, *depend_dataflows) do |*results|
+  # do something
+end
+</code></pre>
+<p>上記の例だと5つまでのdataflowが並列で実行される</p>
+
+<p>処理のキューイングも勝手にやってくれる</p>
+
+</section>
+<section>
+
+<h2><strong>難しい並列実行制御を</strong></h2>
+
+<h2><strong>concurrent-rubyに丸投げして</strong></h2>
+
+<h2><strong>開発を簡易化</strong></h2>
+
+</section>
+<section>
+
+<h2><strong>ワークフローエンジン</strong></h2>
+
+<h2><strong>Rukawaをよろしく</strong></h2>
+
+<p><a aria-label="Star joker1007/rukawa on GitHub" data-count-aria-label="# stargazers on GitHub" data-count-api="/repos/joker1007/rukawa#stargazers_count" data-count-href="/joker1007/rukawa/stargazers" data-style="mega" data-icon="octicon-star" href="https://github.com/joker1007/rukawa" class="github-button">Star</a>
+<script async defer id="github-bjs" src="https://buttons.github.io/buttons.js"></script></p>
+
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'default',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>
