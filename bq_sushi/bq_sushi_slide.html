@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <title></title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="reveal.js/css/reveal.css">
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+  <link rel="stylesheet" href="reveal.js/css/theme/night.css" id="theme">
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  </script>
+  <!--[if lt IE 9]>
+  <script src="reveal.js/lib/js/html5shiv.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+
+<section id="fluentd-x-embulk-x-bigqueryで作るバッチ集計処理基盤" class="slide level1">
+<h1>fluentd x embulk x bigqueryで作るバッチ集計処理基盤</h1>
+<p><span class="citation" data-cites="joker1007">@joker1007</span></p>
+<div class="sourceCode"><pre class="sourceCode ruby"><code class="sourceCode ruby">p <span class="st">&quot;hoge&quot;</span></code></pre></div>
+<p>メインのバッチ集計処理基盤としてbigqueryを利用するために今取り組んでいること、 そしてそれを支えるfluentdとembulkのbigqueryプラグインの現状を解説します。</p>
+</section>
+<section class="slide level1">
+
+<h2 id="利用背景">利用背景</h2>
+<ul>
+<li>MySQLの限界</li>
+<li>割とヘビーな集計</li>
+<li>公平な算出</li>
+</ul>
+</section>
+<section class="slide level1">
+
+<h2 id="構成イメージ図">構成イメージ図</h2>
+<p>アプリ自体はAWSでGCP周りはBigqueryだけ使っている <img src="bq_sushi.png" alt="イメージ図" /></p>
+</section>
+<section class="slide level1">
+
+<h2 id="redshiftやemrに行かなかった理由">RedshiftやEMRに行かなかった理由</h2>
+<ul>
+<li>ストレージコスト (Redshift)</li>
+<li>構築コスト (EMR)</li>
+<li>分散キーの設計負荷</li>
+<li>データ量が中途半端</li>
+</ul>
+<p>Bigqueryはイニシャルコストがほぼ0なので試し易い</p>
+<p>将来的にはそちらに移行することもあり得る</p>
+<h2 id="現在の使い方">現在の使い方</h2>
+<ul>
+<li>日次・週次・月次のバッチ集計処理</li>
+<li>google-api-ruby-clientを自前のRubyクラスでラップ</li>
+<li>SQLのテンプレートをerbで書いてジョブを投入。基本は結果を待ち受ける。</li>
+<li>実行はRundeckでトリガーし、細かい依存はRakeで制御</li>
+<li>割とすぐに辛くなってきた</li>
+<li>ワークフロー管理ツール検討中</li>
+</ul>
+<h2 id="rundeckの辛い点">Rundeckの辛い点</h2>
+<ul>
+<li>アプリ上のコードとジョブの起動部分が乖離する可能性がある</li>
+<li>スクリプトのバージョン管理がやり辛い (できなくはない)</li>
+<li>ジョブの並列実行、Joinして待ち受けができない</li>
+</ul>
+<h2 id="その他やっていること">その他やっていること</h2>
+<ul>
+<li>Railsアプリのidの扱いを改修</li>
+<li>RDBにインサートしないと各項目との関連が定義できないのは辛い</li>
+<li>最終的にはRailsアプリから独立できるように</li>
+<li>google-api-client gemを直す</li>
+<li>割とバグとか機能不足を踏む</li>
+</ul>
+<h2 id="雑感">雑感</h2>
+<ul>
+<li>ウインドウ関数が割と揃ってる</li>
+<li>UNIONはめっちゃ早い</li>
+<li>けどやり過ぎるとbillingTierが上がる</li>
+<li>カラムに転換するようなクエリは遅い</li>
+<li>REPEATED型便利</li>
+<li>NEST関数をトップレベルで使いたい</li>
+<li>今仕方なくUDFを使っている</li>
+<li>flattenResultsをfalseにすると場合によって変な挙動をする</li>
+<li>テーブル分割は大事</li>
+</ul>
+<h2 id="fluentd-x-embulkによるデータ転送">fluentd x embulkによるデータ転送</h2>
+<h2 id="基本はfluentd">基本はfluentd</h2>
+<ul>
+<li>fluent-plugin-bigquery-custom</li>
+<li>オリジナルを自分でforkして改造</li>
+<li>日付毎にテーブルを分ける</li>
+<li>file bufferに溜めて一定間隔でLOAD</li>
+</ul>
+<h2 id="embulkの利用">embulkの利用</h2>
+<ul>
+<li>embulk-output-bigquery</li>
+<li>更新があるデータの再投入</li>
+<li>テーブル追加時の過去データ投入</li>
+</ul>
+<h2 id="fluent-plugin-bigquery-custom">fluent-plugin-bigquery-custom</h2>
+<h3 id="本家マージ済み">本家マージ済み</h3>
+<ul>
+<li>time sliced方式を採用</li>
+<li>load方式に対応 (未リリース) ### 本家にはない</li>
+<li>ignoreUnknownValues etcに対応</li>
+<li>templateSuffixに対応</li>
+<li>loadジョブでもtemplateSuffixもどき</li>
+</ul>
+<h2 id="ちなみに本家のメンテナもやってます-smile">ちなみに本家のメンテナもやってます :smile:</h2>
+<p>fluent-plugin-bigqueryにじわじわ還元中 本当は一本化したいんだけど、割とアグレッシブに変えたので……。</p>
+<h2 id="スキーマの管理">スキーマの管理</h2>
+<ul>
+<li>bigQuery側にベースのテーブルを作る</li>
+<li>fluentdもembulkもそこからスキーマを取得する</li>
+<li>大本の定義はソースコードと共に管理</li>
+<li>変更が必要な時</li>
+<li>ペイロードのカラムを増やす</li>
+<li>ベースのテーブルを作り直す</li>
+<li>ignoreUnknownValuesで無視する</li>
+<li>新規にテーブルが作られる時に変更後のベースのテーブルを参照する</li>
+</ul>
+<h2 id="embulk-output-bigquery">embulk-output-bigquery</h2>
+<p>必要な機能をいくつかPR - 羃等な投入を可能にするmode - スキーマ管理のためtemplate_tableオプションの追加 - 並列処理時にアップロードの高速化</p>
+<h2 id="embulk-output-bigqueryの今">embulk-output-bigqueryの今</h2>
+<p>JavaからJRubyに書き直すPRがある</p>
+<h2 id="rubyとjavaが書けるとカスタムし易い">RubyとJavaが書けるとカスタムし易い</h2>
+<h2 id="テストデータの投入">テストデータの投入</h2>
+<p>拙作のbq_fake_viewというgemを使っている UNIONの速さを利用して、RubyのHash in Arrayなデータ構造を 一行づつ静的なSQLに変換し、viewとしてBigquery上に定義する</p>
+<p>ストリーミングインサートのコスト不要、Loadと違って即クエリ可能。 事前にテーブルを準備する必要もない。</p>
+<p>カラムの参照がテーブルとviewでは完全に同じというわけではないらしい。</p>
+<p>テストが終わったらdata_setごと削除して作り直す</p>
+<h2 id="開発データの投入">開発データの投入</h2>
+<p>自動expireするdata_setを作って、embulkで投入 embulkのコンフィグファイルは拙作のyaml_masterでパラメーター化して動的に生成する</p>
+<h2 id="集計結果の受け取りが課題">集計結果の受け取りが課題</h2>
+<ul>
+<li>embulk-input-bigqueryを作る？</li>
+<li>GCSにexportしてからembulkで取る</li>
+<li>集計結果のストアもRDBだとそろそろ辛い</li>
+</ul>
+<p>知見ある人が居たら、教えてください</p>
+</section>
+    </div>
+  </div>
+
+  <script src="reveal.js/lib/js/head.min.js"></script>
+  <script src="reveal.js/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true }
+        ]
+      });
+    </script>
+    </body>
+</html>

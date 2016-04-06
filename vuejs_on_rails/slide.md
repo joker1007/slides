@@ -14,6 +14,9 @@ Tomohiro Hashidate
 - パーフェクトRuby, パーフェクトRuby on Rails著者
 - vimmer
 
+![pruby.jpg](pruby.jpg)
+![prails.jpg](prails.jpg)
+
 
 
 ## 今日は大体JSの話をします。

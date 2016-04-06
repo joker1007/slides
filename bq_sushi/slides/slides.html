@@ -1,0 +1,466 @@
+<section>
+
+<h1><strong>fluentd x embulk x bigqueryで作る</strong></h1>
+
+<h1><strong>バッチ集計処理基盤</strong></h1>
+
+<p><a href="https://github.com/joker1007" class="user-mention">@joker1007</a></p>
+
+</section>
+<section>
+
+<h4>メインのバッチ集計処理基盤として</h4>
+
+<h4>bigqueryを利用するために今取り組んでいること、</h4>
+
+<h4>そしてそれを支えるfluentdとembulkの</h4>
+
+<h4>bigqueryプラグインの現状を解説します。</h4>
+
+</section>
+<section>
+
+<h2>self.inspect</h2>
+
+<ul>
+<li><a href="https://github.com/joker1007" class="user-mention">@joker1007</a></li>
+<li>Freelance (Ruby/Rails/JS/Redshift/Bigquery)</li>
+<li>パーフェクトRubyとかパーフェクトRailsとか</li>
+<li>最近はアプリより基盤寄りの仕事が多い</li>
+<li>(株)Reproで仕事中</li>
+</ul>
+
+<p><a href="https://www.wantedly.com/companies/repro" title="Repro Inc.の最新情報 - Wantedly">Repro Inc.の最新情報 - Wantedly</a></p>
+
+<p>Hireling Now <img class="emoji" alt=":exclamation:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/2757.png"></p>
+
+</section>
+<section>
+
+<p>資料作成サボってて時間がやばくなってしまい、</p>
+
+<p>業務時間使って資料作ってたので、</p>
+
+<p>宣伝を入れるからってことで許してもらいました <img class="emoji" alt=":trollface:" src="https://assets-cdn.github.com/images/icons/emoji/trollface.png"></p>
+
+</section>
+<section>
+
+<h2><strong>BQの利用背景</strong></h2>
+
+<ul>
+<li>MySQLの限界
+
+<ul>
+<li>将来的にもデータ量は増え続ける</li>
+</ul>
+</li>
+<li>割とヘビーな集計処理がある</li>
+<li>できるだけ同時に算出したい</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>構成イメージ図</strong></h2>
+
+<p>アプリ自体はAWSでGCP周りはBigqueryだけ使っている
+<img src="bq_sushi.png" alt="イメージ図"></p>
+
+</section>
+<section>
+
+<h2><strong>RedshiftやEMRに行かなかった理由</strong></h2>
+
+<ul>
+<li>ストレージコスト (Redshift)</li>
+<li>構築コスト (EMR)</li>
+<li>分散キーの設計負荷</li>
+<li>データ量が中途半端</li>
+</ul>
+
+<p>Bigqueryはイニシャルコストがほぼ0なので試し易い</p>
+
+<p>将来的にはそちらに移行することもあり得る</p>
+
+</section>
+<section>
+
+<h2><strong>現在の使い方</strong></h2>
+
+<ul>
+<li>日次・週次・月次のバッチ集計処理</li>
+<li>google-api-ruby-clientを自前のRubyクラスでラップ</li>
+<li>SQLのテンプレートをerbで書いてジョブを投入。基本は結果を待ち受ける。</li>
+<li>実行はRundeckでトリガーし、細かい依存は<a href="https://github.com/joker1007/rukawa">Rukawa</a>で制御
+
+<ul>
+<li>Rukawaは自作のワークフロー管理ツール</li>
+<li>LuigiとかAirflowをもっと単純にしてRubyにしたもの</li>
+<li>分散処理とかは考えてない</li>
+<li>Rakeで制御するのは辛い</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>実行主体はこんな感じ</strong></h2>
+<pre><code class="ruby">module Bigquery
+  module QueryJobs
+    class CalculationJob1 &lt; Base
+      self.template_name = "calculation_job_1"
+    end
+  end
+end
+</code></pre>
+<pre><code class="sql">-- calculation_job_1.sql.erb
+SELECT id, COUNT(*) FROM &lt;%= table_name %&gt; GROUP BY id
+</code></pre>
+</section>
+<section>
+
+<h2><strong>Rukawaの例</strong></h2>
+<pre><code class="ruby">module Workflow
+  class CalculationJob1 &lt; Rukawa::Job
+    def run
+      Bigquery::QueryJobs::CalculationJob1.run_with_wait(
+        {table_name: "foo"},
+        destination_table_name: "foo_count"
+      )
+    end
+  end
+end
+</code></pre>
+</section>
+<section>
+
+<h2><strong>Rundeckの辛い点</strong></h2>
+
+<ul>
+<li>アプリ上のコードとジョブの起動部分が乖離する可能性がある</li>
+<li>スクリプトのバージョン管理がやり辛い (できなくはない)</li>
+<li>ジョブの並列実行、Joinして待ち受けができない</li>
+</ul>
+
+<p>というわけで、今の所集約スケジューラとして利用</p>
+
+</section>
+<section>
+
+<h2><strong>その他やっていること</strong></h2>
+
+<ul>
+<li>Railsアプリのidの扱いを改修
+
+<ul>
+<li>Railsは基本的にIDが連番</li>
+<li>RDBにインサートしないと各項目との関連が決定できないのは辛い</li>
+<li>基本的に処理はRailsアプリから独立させている</li>
+</ul>
+</li>
+<li>google-api-client gemを直す
+
+<ul>
+<li>割とバグとか機能不足を踏む</li>
+<li>タイムアウト値が上書きできないとか……</li>
+<li>困る箇所は直したので、今ならそんなに問題無いと思う</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>BQ雑感</strong></h2>
+
+<ul>
+<li>ウインドウ関数が割と揃ってる</li>
+<li>UNIONはめっちゃ早い
+
+<ul>
+<li>けどやり過ぎるとbillingTierが上がる</li>
+</ul>
+</li>
+<li>CASE式でカラムに転換するようなクエリは遅い</li>
+<li>REPEATED型便利</li>
+<li>NEST関数をトップレベルで使いたい
+
+<ul>
+<li>今仕方なくUDFを使っている</li>
+</ul>
+</li>
+<li>Queryがテーブルに書き出す時にスキーマ指定したい
+
+<ul>
+<li>全部NULLABLEは微妙</li>
+<li>今仕方なくUDFを使っている</li>
+</ul>
+</li>
+<li>flattenResultsをfalseにすると場合によって変な挙動をする</li>
+<li>テーブル分割は大事</li>
+</ul>
+
+</section>
+<section>
+
+<h1><strong>fluentd x embulkによるデータ転送</strong></h1>
+
+</section>
+<section>
+
+<h2><strong>基本はfluentd</strong></h2>
+
+<ul>
+<li>fluent-plugin-bigquery-custom
+
+<ul>
+<li>オリジナルを自分でforkして改造</li>
+<li>日付毎にテーブルを分ける</li>
+</ul>
+</li>
+<li>file bufferに溜めて一定間隔でLOAD</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>embulkの利用</strong></h2>
+
+<ul>
+<li>embulk-output-bigquery
+
+<ul>
+<li>更新があるデータの再投入</li>
+<li>テーブル追加時の過去データ投入</li>
+<li>データの洗い替え</li>
+</ul>
+</li>
+<li>embulk-input-gcs
+
+<ul>
+<li>集計結果のインポート</li>
+</ul>
+</li>
+<li>configファイルの生成を支援する仕組みを用意
+
+<ul>
+<li>
+<a href="https://github.com/joker1007/yaml_master">yaml_master</a>というyaml生成ツールを自作</li>
+<li>一つのmaster.ymlから個別の設定を書き出す</li>
+<li>認証情報の一元管理</li>
+<li>ERBを間に噛ませるのでliquidよりは自由</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>fluent-plugin-bigquery-custom</strong></h2>
+
+<h3><strong>本家マージ済み</strong></h3>
+
+<ul>
+<li>time sliced方式を採用</li>
+<li>load方式に対応 (未リリース)</li>
+</ul>
+
+<hr>
+
+<h3><strong>本家にはない</strong></h3>
+
+<ul>
+<li>ignoreUnknownValues etcに対応
+
+<ul>
+<li>エラーハンドリングの向上</li>
+</ul>
+</li>
+<li>templateSuffixに対応</li>
+<li>loadジョブでもtemplateSuffixもどき
+
+<ul>
+<li>これでスキーマを変更できる (後述)</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<strong>実は本家のメンテナもやってます</strong> <img class="emoji" alt=":smile:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/1f604.png">
+</h2>
+
+<p>fluent-plugin-bigqueryにじわじわ還元中</p>
+
+<p>本当は一本化したいんだけど、割とアグレッシブに変えたので……。</p>
+
+</section>
+<section>
+
+<h2><strong>スキーマの管理</strong></h2>
+
+<ul>
+<li>BigQuery側にベースのテーブルを作る</li>
+<li>fluentdもembulkもそこからスキーマを取得する</li>
+<li>大本の定義はソースコードと共に管理</li>
+<li>変更が必要な時
+
+<ol>
+<li>fluentdのペイロードを修正する</li>
+<li>ベースのテーブルを作り直す</li>
+<li>ignoreUnknownValuesで無視する</li>
+<li>日次で新規にテーブルが作られる時にベースから新スキーマを参照する</li>
+</ol>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>embulk-output-bigquery</strong></h2>
+
+<p>必要な機能をいくつかPR</p>
+
+<ul>
+<li>羃等な投入を可能にするmode
+
+<ul>
+<li>delete_in_advance</li>
+<li>replace</li>
+<li>replace_backup</li>
+</ul>
+</li>
+<li>スキーマ管理のためtemplate_tableオプションの追加</li>
+<li>並列処理時のアップロードを高速化</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>embulk-output-bigqueryの今</strong></h2>
+
+<p>sonots先生により、JavaからJRubyにガツっと書き変わった。</p>
+
+<p>なので、Rubyが書けるとカスタムし易い</p>
+
+</section>
+<section>
+
+<h1><strong>その他の開発Tips</strong></h1>
+
+</section>
+<section>
+
+<h2><strong>ユニットテスト用のデータの投入</strong></h2>
+
+<p>拙作の<a href="https://github.com/joker1007/bq_fake_view">bq_fake_view</a>というgemを使っている</p>
+
+<p>BQのUNIONの速さを利用して、RubyのHash in Arrayなデータ構造を</p>
+
+<p>一行づつ静的なSQLに変換し、viewとしてBigquery上に定義する</p>
+
+</section>
+<section>
+
+<h2><strong>メリット</strong></h2>
+
+<ul>
+<li>ストリーミングインサートのコスト不要</li>
+<li>Loadと違って即クエリ可能</li>
+<li>事前にテーブルを準備する必要もない</li>
+</ul>
+
+<p>テストが終わったらdata_setごと削除して作り直す</p>
+
+<hr>
+
+<h2><strong>デメリット</strong></h2>
+
+<ul>
+<li>テーブルとviewでは完全に同じというわけではないらしい
+
+<ul>
+<li>カラムの参照ルールが微妙に違う</li>
+<li>テーブル名を省略するとエラーになったり</li>
+</ul>
+</li>
+<li>大量のデータには向かない
+
+<ul>
+<li>UNIONで無茶してるので <img class="emoji" alt=":sweat_smile:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/1f605.png">
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>開発データの投入</strong></h2>
+
+<p>自動expireするdata_setを作って、embulkで投入</p>
+
+<p>Rukawaにパラメーターを渡して実行すると投入できるようにしている</p>
+
+</section>
+<section>
+
+<h2><strong>集計結果の受け取りが課題</strong></h2>
+
+<p>BQ上での集計結果をアプリ側に戻す必要がある</p>
+
+<ul>
+<li>GCSにexportしてからembulkで取得する
+
+<ul>
+<li>CPU数上げれば並列できる</li>
+<li>最悪EMRでMapReduce Executorが使える？</li>
+</ul>
+</li>
+<li>集計結果のストアがRDBだとそろそろ辛い
+
+<ul>
+<li>DynamoDBの検討</li>
+<li>ElasticSearchの検討</li>
+</ul>
+</li>
+</ul>
+
+<p>知見ある人が居たら、教えてください</p>
+
+</section>
+<section>
+
+<h2><strong>まとめ</strong></h2>
+
+<ul>
+<li>BQは安いし早いし楽
+
+<ul>
+<li>時々ハマったりクエリ刺さったりするけど</li>
+</ul>
+</li>
+<li>REPEATED型もうちょっと使い易くしてください <img class="emoji" alt=":bow:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/1f647.png">
+</li>
+<li>スキーマがもうちょっと変え易ければ <img class="emoji" alt=":bow:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/1f647.png">
+</li>
+<li>ワークフロー管理エンジンは何かしら必要
+
+<ul>
+<li>Ruby製はあんまり手頃なのが無かった</li>
+</ul>
+</li>
+<li>fluentdとembulkとgoogle-api-client、大分整備したので使えるよ
+
+<ul>
+<li>custom版は早く本家に還元します…… <img class="emoji" alt=":sweat:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/1f613.png">
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
