@@ -114,7 +114,7 @@
 </section>
 <section>
 
-<h2><strong>RedshiftやEMRに行かなかった理由</strong></h2>
+<h2><strong>RedshiftやEMRでない理由</strong></h2>
 
 <ul>
 <li>ストレージコスト (Redshift)</li>
@@ -135,7 +135,7 @@
 <ul>
 <li>日次・週次・月次のバッチ集計処理</li>
 <li>google-api-ruby-clientを自前のRubyクラスでラップ</li>
-<li>SQLのテンプレートをerbで書いてジョブを投入。基本は結果を待ち受ける。</li>
+<li>SQLのテンプレートをerbで書いてジョブを投入。結果を待ち受ける。</li>
 <li>実行はRundeckでトリガーし、細かい依存は<a href="https://github.com/joker1007/rukawa">Rukawa</a>で制御
 
 <ul>
@@ -200,8 +200,8 @@ end
 
 <ul>
 <li>Railsは基本的にIDが連番</li>
-<li>RDBにインサートしないと各項目との関連が決定できないのは辛い</li>
-<li>基本的に処理はRailsアプリから独立させている</li>
+<li>RDBにインサートしないと関連が決定できないのは辛い</li>
+<li>BQ周りは基本的に処理はRailsアプリから独立させている</li>
 </ul>
 </li>
 <li>google-api-client gemを直す
@@ -221,6 +221,7 @@ end
 
 <ul>
 <li>ウインドウ関数が割と揃ってる</li>
+<li>テーブル分割は大事</li>
 <li>UNIONはめっちゃ早い
 
 <ul>
@@ -243,7 +244,7 @@ end
 </ul>
 </li>
 <li>flattenResultsをfalseにすると場合によって変な挙動をする</li>
-<li>テーブル分割は大事</li>
+<li><strong>突然のresourceExceeded！</strong></li>
 </ul>
 
 </section>
@@ -273,6 +274,12 @@ end
 <h2><strong>embulkの利用</strong></h2>
 
 <ul>
+<li>embulk-input-mysql
+
+<ul>
+<li>RDSからのデータ取得</li>
+</ul>
+</li>
 <li>embulk-output-bigquery
 
 <ul>
@@ -287,6 +294,27 @@ end
 <li>集計結果のインポート</li>
 </ul>
 </li>
+<li>embulk-parser-jsonl
+
+<ul>
+<li>exportした集計結果をparseする</li>
+<li>BQのexportするJSONの型が……。</li>
+</ul>
+</li>
+<li>embulk-output-mysql
+
+<ul>
+<li>集計結果をRDBに書き戻す</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>embulkを利用する際の工夫</strong></h2>
+
+<ul>
 <li>configファイルの生成を支援する仕組みを用意
 
 <ul>

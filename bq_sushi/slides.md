@@ -48,7 +48,7 @@ Hireling Now :exclamation:
 
 ---
 
-## **RedshiftやEMRに行かなかった理由**
+## **RedshiftやEMRでない理由**
 - ストレージコスト (Redshift)
 - 構築コスト (EMR)
 - 分散キーの設計負荷
@@ -63,7 +63,7 @@ Bigqueryはイニシャルコストがほぼ0なので試し易い
 ## **現在の使い方**
 - 日次・週次・月次のバッチ集計処理
 - google-api-ruby-clientを自前のRubyクラスでラップ
-- SQLのテンプレートをerbで書いてジョブを投入。基本は結果を待ち受ける。
+- SQLのテンプレートをerbで書いてジョブを投入。結果を待ち受ける。
 - 実行はRundeckでトリガーし、細かい依存は[Rukawa](https://github.com/joker1007/rukawa)で制御
   - Rukawaは自作のワークフロー管理ツール
   - LuigiとかAirflowをもっと単純にしてRubyにしたもの
@@ -120,8 +120,8 @@ end
 ## **その他やっていること**
 - Railsアプリのidの扱いを改修
   - Railsは基本的にIDが連番
-  - RDBにインサートしないと各項目との関連が決定できないのは辛い
-  - 基本的に処理はRailsアプリから独立させている
+  - RDBにインサートしないと関連が決定できないのは辛い
+  - BQ周りは基本的に処理はRailsアプリから独立させている
 - google-api-client gemを直す
   - 割とバグとか機能不足を踏む
   - タイムアウト値が上書きできないとか……
@@ -131,6 +131,7 @@ end
 
 ## **BQ雑感**
 - ウインドウ関数が割と揃ってる
+- テーブル分割は大事
 - UNIONはめっちゃ早い
   - けどやり過ぎるとbillingTierが上がる
 - CASE式でカラムに転換するようなクエリは遅い
@@ -141,7 +142,7 @@ end
   - 全部NULLABLEは微妙
   - 今仕方なくUDFを使っている
 - flattenResultsをfalseにすると場合によって変な挙動をする
-- テーブル分割は大事
+- **突然のresourceExceeded！**
 
 ---
 
@@ -158,12 +159,23 @@ end
 ---
 
 ## **embulkの利用**
+- embulk-input-mysql
+  - RDSからのデータ取得
 - embulk-output-bigquery
   - 更新があるデータの再投入
   - テーブル追加時の過去データ投入
   - データの洗い替え
 - embulk-input-gcs
   - 集計結果のインポート
+- embulk-parser-jsonl
+  - exportした集計結果をparseする
+  - BQのexportするJSONの型が……。
+- embulk-output-mysql
+  - 集計結果をRDBに書き戻す
+
+---
+
+## **embulkを利用する際の工夫**
 - configファイルの生成を支援する仕組みを用意
   - [yaml\_master](https://github.com/joker1007/yaml_master)というyaml生成ツールを自作
   - 一つのmaster.ymlから個別の設定を書き出す
