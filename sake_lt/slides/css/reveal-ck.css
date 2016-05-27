@@ -1,0 +1,14 @@
+.reveal section img.emoji {
+    position: relative;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    vertical-align:middle;
+    margin: 0;
+    margin-bottom:.25em;
+    display:inline-block;
+}
+
+.reveal .slide-background.present {
+  opacity: 0.7;
+}
