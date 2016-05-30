@@ -11,7 +11,7 @@
 - Asakusa.rb 花見への持ち込み
 - TokyuRuby会議 酒王
 
-<section data-background="2014-02-09+20.35.42.jpg" data-background-size="contain">
+<section data-background="2014-02-09_20.35.42.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -40,7 +40,7 @@
 酵母菌は酒蔵と共に代々受け継がれていた。  
 最近は色々と新しい酵母の開発も進んでいる。
 
-<section data-background="2014-12-13+20.08.45.jpg" data-background-size="contain">
+<section data-background="2014-12-13_20.08.45.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -55,7 +55,7 @@
 7. おりを濾過する
 8. 火入れする
 
-<section data-background="2016-04-16+17.21.29.jpg" data-background-size="contain">
+<section data-background="2016-04-16_17.21.29.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -77,14 +77,14 @@
 **この基準は平成3年に制定されたもの**  
 **まだ25年ぐらいしか立ってない。**
 
-<section data-background="2015-12-19+17.21.08.jpg" data-background-size="contain">
+<section data-background="2015-12-19_17.21.08.jpg" data-background-size="contain">
 </section>
 
 ---
 
 ## **純米酒と非純米酒**
 
-<section data-background="2014-12-20+18.18.09.jpg" data-background-size="contain">
+<section data-background="2014-12-20_18.18.09.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -100,7 +100,7 @@
 
 個人的には本醸造は割と外れが……。
 
-<section data-background="2014-02-01+18.56.39.jpg" data-background-size="contain">
+<section data-background="2014-02-01_18.56.39.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -111,7 +111,7 @@
 個人的には後に残らず飲み易いものが多い。  
 日本酒慣れしていない人は、純米から飲むのが良い。
 
-<section data-background="2016-02-26+21.57.23.jpg" data-background-size="contain">
+<section data-background="2016-02-26_21.57.23.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -125,7 +125,7 @@
 現在はラベルに書かれてる情報も増えており、  
 お酒を選びやすい世の中になっている。
 
-<section data-background="2016-02-26+22.31.04.jpg" data-background-size="contain">
+<section data-background="2016-02-26_22.31.04.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -139,9 +139,9 @@
 - 山廃
 - BY
 - 酒米
-- 日本酒度 +か-
+- 日本酒度
 
-<section data-background="2016-02-06+19.37.35.jpg" data-background-size="contain">
+<section data-background="2016-02-06_19.37.35.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -157,7 +157,7 @@
 - **八反錦**
 - **愛山**
 
-<section data-background="2014-05-31+21.07.04.jpg" data-background-size="contain">
+<section data-background="2014-05-31_21.07.04.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -169,7 +169,7 @@
 - 旨味・酸味
 - (甘い・辛い)
 
-<section data-background="2014-12-20+18.16.38.jpg" data-background-size="contain">
+<section data-background="2014-12-20_18.16.38.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -187,7 +187,7 @@
 特に味わいの軽い綺麗な純米吟醸等。  
 40度ぐらいのぬる燗が個人的にオススメ。
 
-<section data-background="2016-02-06+19.12.56.jpg" data-background-size="contain">
+<section data-background="2016-02-06_19.12.56.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -200,7 +200,7 @@
 
 それがあんまりメジャー過ぎるものばかりだと……。
 
-<section data-background="2016-02-06+20.25.42.jpg" data-background-size="contain">
+<section data-background="2016-02-06_20.25.42.jpg" data-background-size="contain">
 </section>
 
 ---
@@ -215,12 +215,12 @@
 - すずでん (四谷)
 - さくら酒店 (インターネット)
 
-<section data-background="2016-02-26+21.44.40.jpg" data-background-size="contain">
+<section data-background="2016-02-26_21.44.40.jpg" data-background-size="contain">
 </section>
 
 ---
 
 ## **Enjoy Sake Life** :sake: :beers:
 
-<section data-background="2014-04-27+13.22.48.jpg" data-background-size="contain">
+<section data-background="2014-04-27_13.22.48.jpg" data-background-size="contain">
 </section>
