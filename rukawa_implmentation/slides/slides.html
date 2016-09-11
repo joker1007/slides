@@ -1,0 +1,272 @@
+<section>
+
+<h2><strong>ワークフローエンジン</strong></h2>
+
+<h1><strong>Rukawaと</strong></h1>
+
+<h1><strong>実装のサボり方</strong></h1>
+
+<p><a href="https://github.com/joker1007" class="user-mention">@joker1007</a></p>
+
+</section>
+<section>
+
+<h2><strong>self.inspect</strong></h2>
+
+<ul>
+<li><a href="https://github.com/joker1007" class="user-mention">@joker1007</a></li>
+<li>Repro inc. (newbie) CTO</li>
+</ul>
+
+<p><img src="icon.jpg" alt="icon"></p>
+
+</section>
+<section>
+
+<h2><strong>時間が無いので会社の説明とか</strong></h2>
+
+<h2><strong>面倒なことはしません</strong></h2>
+
+</section>
+<section>
+
+<h2><strong>Requirements of Complicated Batch</strong></h2>
+
+<ul>
+<li>Define, visualize dependency of jobs
+
+<ul>
+<li>Fork and merge job route</li>
+<li>DAG</li>
+</ul>
+</li>
+<li>Concurrent execution</li>
+<li>Control concurrency</li>
+<li>Retry any jobs</li>
+<li>Re-usable jobnet</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Rake is sometimes painful</h2>
+
+<ul>
+<li>Hard to control concurrent execution</li>
+<li>Hard to understand complicated job dependencies</li>
+<li>Cannot Resume jobs freely</li>
+<li>Hard to ignore dependency even when necessary</li>
+</ul>
+
+<p>To solve thease probrem, I developed <a href="https://github.com/joker1007/rukawa">rukawa</a></p>
+
+<p>(My talk proposal is lost to pwrake <img class="emoji" alt=":cry:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/1f622.png">)</p>
+
+</section>
+<section>
+
+<h2><strong>Sample Job</strong></h2>
+<pre><code class="ruby">class SampleJob &lt; Rukawa::Job
+  def run
+    sleep rand(5)
+    ExecuteLog.store[self.class] = Time.now
+  end
+end
+
+class Job1 &lt; SampleJob
+  set_description "Job1 description body"
+end
+class Job2 &lt; SampleJob
+  def run
+    raise "job2 error"
+  end
+end
+class Job3 &lt; SampleJob
+end
+class Job4 &lt; SampleJob
+  set_dependency_type :one_success
+end
+</code></pre>
+</section>
+<section>
+
+<h2><strong>Sample JobNet</strong></h2>
+<pre><code class="ruby">class SampleJobNet &lt; Rukawa::JobNet
+  class &lt;&lt; self
+    def dependencies
+      {
+        Job1 =&gt; [],
+        Job2 =&gt; [Job1], Job3 =&gt; [Job1],
+        Job4 =&gt; [Job2, Job3],
+      }
+    end
+  end
+end
+</code></pre>
+</section>
+<section>
+
+<p><strong>Separates actual job implementation and job dependencies</strong></p>
+
+<p><strong>User needs only to inherit base class and implement <code>run</code></strong></p>
+
+</section>
+<section>
+
+<h1><strong>DEMO</strong></h1>
+
+</section>
+<section>
+
+<h2><strong>Features of Rukawa</strong></h2>
+
+<ul>
+<li>Visualize dependency (Graphviz)</li>
+<li>Change dependency type
+
+<ul>
+<li>all_success, one_success, all_failed, and ...</li>
+<li>inspired by Airflow</li>
+</ul>
+</li>
+<li>Define <code>resource_count</code> (like Semaphore)</li>
+<li>Visualize results (Graphviz and colored node)</li>
+<li>Variables from cli options</li>
+<li>ActiveJob Integration</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>Rukawa focuses</strong></h2>
+
+<ul>
+<li>Creating DAG</li>
+<li>Simple Ruby Class Interface</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>Rukawa not focuses</strong></h2>
+
+<ul>
+<li>Implements job queue</li>
+<li>Implements concurrency control</li>
+<li>Distributed execution on multi nodes</li>
+<li>No GUI, No Web UI</li>
+<li>No Cron like scheduler</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Concurrent execution</h2>
+
+<p>I don't want to implement base of concurrent execution.
+Because it is very hard.
+It is over technorogy for normal human being.</p>
+
+</section>
+<section>
+
+<h2><strong>Use concurrent-ruby</strong></h2>
+
+</section>
+<section>
+
+<h2><strong>Dataflow</strong></h2>
+
+<p>複数のFutureを待ち受けて、結果が揃ったら続きを実行する</p>
+<pre><code class="ruby">a = Concurrent::dataflow { 1 }
+b = Concurrent::dataflow { 2 }
+c = Concurrent::dataflow(a, b) { |av, bv| av + bv }
+</code></pre>
+<p>簡易プロセス内ジョブキューとして使える</p>
+
+</section>
+<section>
+
+<h2><strong>ThreadPoolで実行</strong></h2>
+<pre><code class="ruby">pool = Concurrent::FixedThreadPool.new(5)
+
+Concurrent.dataflow_with(pool, *depend_dataflows) do |*results|
+  # do something
+end
+</code></pre>
+</section>
+<section>
+
+<h2><strong>Throws hard work to concurrent-ruby</strong></h2>
+
+<h2><strong>My work becomes light <img class="emoji" alt=":smile:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/1f604.png"></strong></h2>
+
+</section>
+<section>
+
+<h2><strong>Distrubuted execution</strong></h2>
+
+<ul>
+<li>It is very hard to develop seriously</li>
+<li>Need to define usage of datastore outside of Ruby</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>We have ActiveJob</strong></h2>
+
+<ul>
+<li>Many implementations already exist</li>
+<li>I only write simple wrapper of ActiveJob</li>
+<li>Rukaha do only few things
+
+<ul>
+<li>Define dependency</li>
+<li>Kick ActiveJob</li>
+<li>Track job status</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>割り切り</h2>
+
+<ul>
+<li>Use rundeck as scheduler</li>
+<li>I don't use Ruby, when large scale distributrd computation
+
+<ul>
+<li>Hadoop, Spark, Bigquery, Redshift</li>
+</ul>
+</li>
+<li>What I really need is kicking other job framework
+
+<ul>
+<li>GIL of Ruby is not serious performance probrem</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>It is important to make compact tool what you really need for myself</strong></h2>
+
+<h2><strong>and rely on ecosystem as much as possible</strong></h2>
+
+<h2><strong>In order to effective use of limited resource</strong></h2>
+
+</section>
+<section>
+
+<h2><strong>ワークフローエンジン</strong></h2>
+
+<h2><strong>Rukawaをよろしく</strong></h2>
+
+<p><a aria-label="Star joker1007/rukawa on GitHub" data-count-aria-label="# stargazers on GitHub" data-count-api="/repos/joker1007/rukawa#stargazers_count" data-count-href="/joker1007/rukawa/stargazers" data-style="mega" data-icon="octicon-star" href="https://github.com/joker1007/rukawa" class="github-button">Star</a>
+<script async defer id="github-bjs" src="https://buttons.github.io/buttons.js"></script></p>
+
+</section>

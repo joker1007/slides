@@ -1,0 +1,312 @@
+<section>
+
+<h1><strong>RubyからBigqueryとEmbulkを使いたおす</strong></h1>
+
+<p><a href="https://github.com/joker1007" class="user-mention">@joker1007</a></p>
+
+</section>
+<section>
+
+<h2><strong>self.inspect</strong></h2>
+
+<ul>
+<li><a href="https://github.com/joker1007" class="user-mention">@joker1007</a></li>
+<li>Repro inc. CTO (新米 CTO界で最弱)</li>
+</ul>
+
+<p><img src="icon.jpg" alt="icon"></p>
+
+</section>
+<section>
+
+<h2>Sorry, This slides is japanese only.</h2>
+
+<h2>I don't have enough time to translate</h2>
+
+</section>
+<section>
+
+<p><strong>MySQLで集計辛いですよね</strong></p>
+
+<p><strong>DWH使いましょう</strong></p>
+
+<p><strong>Bigqueryはイニシャルコストが超安い</strong></p>
+
+</section>
+<section>
+
+<h2><strong>RubyからBigqueryを実行する</strong></h2>
+
+<p><strong>APIクライアントの <code>insert_job</code>を呼ぶ</strong></p>
+<pre><code class="ruby">@response = Bigquery.client.insert_job("project-id", configuration, @job_options)
+</code></pre>
+<p><strong>apiクライアントがバグバグだったんですが、何回かPR送って結構直しました。</strong></p>
+
+<p>(昔、パラメーターにfalse指定したらnilになったりしてた…)</p>
+
+</section>
+<section>
+
+<p><strong>ジョブの実行は非同期なので、同期的に結果を得るにはwait処理が必要。</strong></p>
+
+<p><strong>割と不安定で良く落ちるのでリトライ処理必須。</strong></p>
+
+<p><strong>自前でAPIクライアントのラッパークラス作って対応している。</strong></p>
+
+<p>(gem化してない)</p>
+
+</section>
+<section>
+
+<h2><strong>データを投入する</strong></h2>
+
+<ul>
+<li>fluent-plugin-bigquery (メンテナ 最近反応遅くてごめんなさい)</li>
+<li>embulk-output-bigquery (コントリビュート)</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>クエリの構築はERBを利用している</strong></h2>
+<pre><code class="sql">SELECT
+  insight_id AS insight_id,
+  retention_converged_at_zoned,
+  conversion_started_at_zoned AS conversion_started_at_zoned,
+  custom_event_id AS custom_event_id,
+  0 AS retention_custom_event_id,
+  retention_count,
+  frequency_threshold,
+  conversion_count,
+  NEST(user_id) AS user_id
+FROM
+&lt;% retention_count_range = (1..14) -%&gt;
+&lt;% frequency_range = (1..5) -%&gt;
+&lt;% retention_count_range.each do |i| -%&gt;
+&lt;% frequency_range.each do |j| -%&gt;
+  &lt;% next if ENV["OLDEST_CONVERSION_FACT"] &amp;&amp; Date.parse(ENV["OLDEST_CONVERSION_FACT"]) &gt; target.ago(i.day) -%&gt;
+  (
+    SELECT
+    /* 省略 */
+  ),
+&lt;% end -%&gt;
+&lt;% end -%&gt;
+GROUP BY
+  insight_id,
+  retention_converged_at_zoned,
+  conversion_started_at_zoned,
+  custom_event_id,
+  retention_custom_event_id,
+  retention_count,
+  frequency_threshold,
+  conversion_count
+</code></pre>
+</section>
+<section>
+
+<p><strong>BigqueryはUNIONが早いので、一見アホっぽいクエリが早い</strong></p>
+
+<p>(billingTierが上がるけど)</p>
+
+</section>
+<section>
+
+<h2><strong>SQLベースの集計処理は段階的な処理が必要</strong></h2>
+
+<ul>
+<li>Aというクエリの結果を元にBやCというクエリを実行する</li>
+<li>中間処理結果テーブルが大量にできる</li>
+<li>集計の複雑さが増すほど数は増える</li>
+</ul>
+
+</section>
+<section>
+
+<h2><strong>バッチ処理の依存関係定義が辛い</strong></h2>
+
+</section>
+<section>
+
+<h2><strong>Rakeだと辛い点</strong></h2>
+
+<ul>
+<li>数が増えてくると依存関係が分かり辛い</li>
+<li>並列で実行制御するのが難しい
+
+<ul>
+<li>特に分岐して後続で待ち受け</li>
+</ul>
+</li>
+<li>途中から実行を継続できない</li>
+<li>依存を無視して単独でタスクを実行できない</li>
+</ul>
+
+<p>解決するために<a href="https://github.com/joker1007/rukawa">rukawa</a>を作った</p>
+
+</section>
+<section>
+
+<p>現在のバッチフローはこんな感じ
+<img src="bigquery_jobnet.png" alt="bigquery_jobnet.png"></p>
+
+</section>
+<section>
+
+<h2><strong>Rukawaの詳細については</strong></h2>
+
+<h2><strong>話せたら3日目の打ち上げで</strong></h2>
+
+</section>
+<section>
+
+<p><strong>10GB/dayぐらいのデータ量で、日に2回のバッチ</strong></p>
+
+</section>
+<section>
+
+<p><strong>これで、月に￥15,000、安い！</strong></p>
+
+<p>(まあ、苦労も多いけど……)</p>
+
+</section>
+<section>
+
+<p><strong>集計したら当然データを出さなきゃいけない</strong></p>
+
+</section>
+<section>
+
+<p><strong>google-api-clientがBqのデータ受け取るのに向いてない</strong></p>
+
+<p>(representableの使い方を間違ってる……)</p>
+
+<p><strong>端的に言うと一行ごとにオブジェクトマッピングが走ってクソ重い</strong></p>
+
+<p><strong>普通にJSONをOjとかでパースした方が早い</strong></p>
+
+</section>
+<section>
+
+<p><strong>Refinementで局所的にオブジェクトマッパーを差し替える</strong></p>
+<pre><code class="ruby">module Bigquery
+  class SimpleHashRepresentable
+    def initialize(instance = {})
+      @instance = instance
+    end
+
+    def from_json(body, options)
+      @instance.merge!(Oj.load(body))
+    end
+  end
+
+  module HashrizeGetJobQueryResults
+    refine Google::Apis::BigqueryV2::BigqueryService do
+      def get_job_query_results(project_id, job_id, max_results: nil, page_token: nil, start_index: nil, timeout_ms: nil, fields: nil, quota_user: nil, user_ip: nil, options: nil, &amp;block)
+        command =  make_simple_command(:get, 'projects/{projectId}/queries/{jobId}', options)
+        command.response_representation = SimpleHashRepresentable
+        command.response_class = Hash
+        command.params['projectId'] = project_id unless project_id.nil?
+        command.params['jobId'] = job_id unless job_id.nil?
+        command.query['maxResults'] = max_results unless max_results.nil?
+        command.query['pageToken'] = page_token unless page_token.nil?
+        command.query['startIndex'] = start_index unless start_index.nil?
+        command.query['timeoutMs'] = timeout_ms unless timeout_ms.nil?
+        command.query['fields'] = fields unless fields.nil?
+        command.query['quotaUser'] = quota_user unless quota_user.nil?
+        command.query['userIp'] = user_ip unless user_ip.nil?
+        execute_or_queue_command(command, &amp;block)
+      end
+    end
+  end
+end
+</code></pre>
+</section>
+<section>
+
+<p><strong>バルクで大量に引っ張ってくる時はembulkを使う</strong></p>
+
+</section>
+<section>
+
+<p><strong>データ量が増えてもスケールさせたい</strong></p>
+
+<p><strong>要は、いざって時に金で殴れるようにしたい</strong></p>
+
+<p><strong>embulkはmapreduce executorでHadoopクラスタ上で実行可能</strong></p>
+
+</section>
+<section>
+
+<p><strong>でもお金も人手も無いから、EMRで必要な時だけサクっと立てて動かしたい</strong></p>
+
+</section>
+<section>
+
+<h2><strong>emr + embulk = <a href="https://github.com/joker1007/emrakul">joker1007/emrakul</a></strong></h2>
+
+</section>
+<section>
+
+<h2><strong>Emrakul, The Aeons Torn</strong></h2>
+
+<p><img src="emrakul.jpg" alt="emrakul.jpg"></p>
+
+</section>
+<section>
+<pre><code class="ruby">Emrakul.run(
+  "embulk_config.yml", #embulkのconfig
+  "embulk_gemfile", # embulkが利用するgemfile
+  "~/emr-ec2-key.pem", # EMRのノードに接続するための鍵
+  emr_config: "emr_config.yml", # EMRの起動設定を書いたyml
+  additional_scripts: ["install_jars.sh"], # setup時に追加で実行するスクリプト
+  additional_uploads: ["google_api_key.json"], # その他必要な鍵等
+)
+</code></pre>
+<ul>
+<li>APIでEMRのクラスタを立てる</li>
+<li>sshkitで必要なものを送って実行</li>
+</ul>
+
+<p>(EMRがややこしいせいで、オプションが多い……)</p>
+
+</section>
+<section>
+
+<h2><strong>embulk on EMRは割とハマる</strong></h2>
+
+<ul>
+<li>TD内部以外でmapreduce executorの情報が無いw</li>
+<li>emr-4.2.0でHadoop-2.6.0を使う</li>
+<li>
+<code>keep_job_flow_alive_when_no_steps</code>をtrueに</li>
+<li>
+<code>mapreduce.map.speculative</code>をfalseに</li>
+<li>
+<code>mapreduce.task.timeout</code>を長くする</li>
+<li>logbackのjarが追加で必要</li>
+<li>log4jを読み込み対象から外す</li>
+</ul>
+
+<p>詳しくは <a href="http://qiita.com/joker1007/items/2d96b73a55eb078faa9e">AWSのEMRでembulkのmapreduce executorを実行するメモ - Qiita</a></p>
+
+<p>emrakulの中にもsampleの設定を同梱している</p>
+
+</section>
+<section>
+
+<p><strong>GCPのData proc上でembulkが実行できるかは今後検証予定</strong></p>
+
+<p>(GCPの方が安く済みそう)</p>
+
+</section>
+<section>
+
+<p><strong>データ量が増えても札束で殴るための準備完了</strong></p>
+
+<p><strong>Money is Power !! <img class="emoji" alt=":dollar:" src="https://assets-cdn.github.com/images/icons/emoji/unicode/1f4b5.png"></strong></p>
+
+<p><strong>Happy 集計ライフへ！</strong></p>
+
+<p><strong>皆さんもBigqueryどうですか！</strong></p>
+
+</section>
