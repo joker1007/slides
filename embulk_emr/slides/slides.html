@@ -12,6 +12,8 @@
 <ul>
 <li>joker1007</li>
 <li>Repro.inc CTO</li>
+<li>vimmer</li>
+<li>Ruby/Railsで仕事をすることが多い</li>
 <li>最近はバッチ処理基盤を弄っていることが多い</li>
 <li>embulk plugin作ったり、fluentd pluginのメンテナやったり
 
@@ -33,6 +35,20 @@
 <li>JavaとJRubyで書かれている</li>
 <li>プラグイン機構 (JavaかRubyで書く)</li>
 <li>Hadoopで実行できる &lt;- これの話</li>
+</ul>
+
+</section>
+<section>
+
+<h2>EMR on embulkでやってること</h2>
+
+<ul>
+<li>Bigqueryで集計した結果をDLして変換処理
+
+<ul>
+<li>要件上、集計結果をバラす必要がある</li>
+</ul>
+</li>
 </ul>
 
 </section>
@@ -65,14 +81,10 @@ out:
 <ul>
 <li>Javaで普通にHadoopのMapReduceジョブを定義している。</li>
 <li>基本的にはMapジョブで各ノードでEmbulkを実行している。</li>
-<li>EmbulkはJavaプログラム上で直接実行できるAPIがある。</li>
 <li>再分散をしない場合はinput taskの数がそのまま並列数になる</li>
 <li>現時点で再分散は時間データによるパーティショニングのみ</li>
 </ul>
 
-</section>
-<section>
-<pre><code class="java"></code></pre>
 </section>
 <section>
 

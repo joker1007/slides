@@ -8,6 +8,8 @@
 
 - joker1007
 - Repro.inc CTO
+- vimmer
+- Ruby/Railsで仕事をすることが多い
 - 最近はバッチ処理基盤を弄っていることが多い
 - embulk plugin作ったり、fluentd pluginのメンテナやったり
   - embulk-filter-ruby_proc
@@ -21,6 +23,12 @@
 - JavaとJRubyで書かれている
 - プラグイン機構 (JavaかRubyで書く)
 - Hadoopで実行できる <- これの話
+
+---
+
+## EMR on embulkでやってること
+- Bigqueryで集計した結果をDLして変換処理
+  - 要件上、集計結果をバラす必要がある
 
 ---
 
@@ -52,14 +60,8 @@ out:
 
 - Javaで普通にHadoopのMapReduceジョブを定義している。
 - 基本的にはMapジョブで各ノードでEmbulkを実行している。
-- EmbulkはJavaプログラム上で直接実行できるAPIがある。
 - 再分散をしない場合はinput taskの数がそのまま並列数になる
 - 現時点で再分散は時間データによるパーティショニングのみ
-
----
-
-```java
-```
 
 ---
 
