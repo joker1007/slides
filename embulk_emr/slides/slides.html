@@ -10,52 +10,49 @@
 <h2>self.inspect</h2>
 
 <ul>
-<li>joker1007</li>
-<li>Repro.inc CTO</li>
-<li>vimmer</li>
-<li>Ruby/Railsで仕事をすることが多い</li>
-<li>最近はバッチ処理基盤を弄っていることが多い</li>
-<li>embulk plugin作ったり、fluentd pluginのメンテナやったり
-
-<ul>
-<li>embulk-filter-ruby_proc</li>
-<li>embulk-parser-avro</li>
-<li>fluentd-plugin-bigquery</li>
-</ul>
-</li>
+  <li>joker1007</li>
+  <li>Repro.inc CTO</li>
+  <li>vimmer</li>
+  <li>Ruby/Railsで仕事をすることが多い</li>
+  <li>最近はバッチ処理基盤を弄っていることが多い</li>
+  <li>embulk plugin作ったり、fluentd pluginのメンテナやったり
+    <ul>
+      <li>embulk-filter-ruby_proc</li>
+      <li>embulk-parser-avro</li>
+      <li>fluentd-plugin-bigquery</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
 <section>
 
 <h2>Embulk</h2>
-
 <ul>
-<li>TD社製のバルクローダツール</li>
-<li>JavaとJRubyで書かれている</li>
-<li>プラグイン機構 (JavaかRubyで書く)</li>
-<li>Hadoopで実行できる &lt;- これの話</li>
+  <li>TD社製のバルクローダツール</li>
+  <li>JavaとJRubyで書かれている</li>
+  <li>プラグイン機構 (JavaかRubyで書く)</li>
+  <li>Hadoopで実行できる &lt;- これの話</li>
 </ul>
 
 </section>
 <section>
 
 <h2>EMR on embulkでやってること</h2>
-
 <ul>
-<li>Bigqueryで集計した結果をDLして変換処理
-
-<ul>
-<li>要件上、集計結果をバラす必要がある</li>
-</ul>
-</li>
+  <li>Bigqueryで集計した結果をDLして変換処理
+    <ul>
+      <li>要件上、集計結果をバラす必要がある</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
 <section>
 
 <h2>Hadoop上での実行方法</h2>
-<pre><code class="yaml">exec:
+
+<pre><code class="language-yaml">exec:
   type: mapreduce
   config_files:
     - /etc/hadoop/conf/core-site.xml
@@ -73,16 +70,17 @@ in:
 out:
   # ...
 </code></pre>
+
 </section>
 <section>
 
 <h2>ざっくり仕組み</h2>
 
 <ul>
-<li>Javaで普通にHadoopのMapReduceジョブを定義している。</li>
-<li>基本的にはMapジョブで各ノードでEmbulkを実行している。</li>
-<li>再分散をしない場合はinput taskの数がそのまま並列数になる</li>
-<li>現時点で再分散は時間データによるパーティショニングのみ</li>
+  <li>Javaで普通にHadoopのMapReduceジョブを定義している。</li>
+  <li>基本的にはMapジョブで各ノードでEmbulkを実行している。</li>
+  <li>再分散をしない場合はinput taskの数がそのまま並列数になる</li>
+  <li>現時点で再分散は時間データによるパーティショニングのみ</li>
 </ul>
 
 </section>
@@ -91,20 +89,19 @@ out:
 <h2>EMRで実行するために</h2>
 
 <ul>
-<li>Hadoopのバージョンに注意</li>
-<li>EMR上のHadoop config fileを利用できる</li>
-<li>一部の設定はオーバーライド必須</li>
-<li>ロガーの調整</li>
-<li>バッチへの組込み方</li>
+  <li>Hadoopのバージョンに注意</li>
+  <li>EMR上のHadoop config fileを利用できる</li>
+  <li>一部の設定はオーバーライド必須</li>
+  <li>ロガーの調整</li>
+  <li>バッチへの組込み方</li>
 </ul>
 
 </section>
 <section>
 
 <h2>Hadoopバージョン</h2>
-
-<p>現時点でHadoop YARN-2.6.0向けに構築されてる。
-2.7系だとログが上手く吐けなくてエラーになった。
+<p>現時点でHadoop YARN-2.6.0向けに構築されてる。<br>
+2.7系だとログが上手く吐けなくてエラーになった。<br>
 解決方法はあるかもしれないが、自分では分からなかった。</p>
 
 </section>
@@ -112,9 +109,10 @@ out:
 
 <h2>configの例</h2>
 
-<p><code>config_files</code>で基本的なEMR上のYARNの設定を引っ張ってくる。
+<p><code>config_files</code>で基本的なEMR上のYARNの設定を引っ張ってくる。<br>
 <code>config</code>で必要な設定をオーバーライド</p>
-<pre><code class="yaml">exec:
+
+<pre><code class="language-yaml">exec:
   type: mapreduce
   config_files:
     - /etc/hadoop/conf/core-site.xml
@@ -129,40 +127,39 @@ out:
     mapreduce.map.java.opts: -Xmx1792m
     mapreduce.reduce.java.opts: -Xmx16m
 </code></pre>
+
 </section>
 <section>
 
 <h2>config解説</h2>
 
 <ul>
-<li>timeoutを伸ばす
-
-<ul>
-<li>デフォルトのタイムアウト(10分)だと短か過ぎる</li>
-<li>再分散を行わないとMapジョブだけで処理するので、Hadoopが処理が進んでいないと判断する</li>
-</ul>
-</li>
-<li>投機的実行を無効にする
-
-<ul>
-<li>EmbulkはMapReduceジョブの終了ステータスを無視する</li>
-<li>自身でステートファイルを書き出して終了ステータスを判断する</li>
-<li>投機的実行で、一部ジョブが強制終了するとそれをエラーと報告する</li>
-</ul>
-</li>
-<li>再分散を行わない場合はmap側にメモリを振り分ける
-
-<ul>
-<li>Reduce側はダミーなのでメモリが無駄になる</li>
-</ul>
-</li>
+  <li>timeoutを伸ばす
+    <ul>
+      <li>デフォルトのタイムアウト(10分)だと短か過ぎる</li>
+      <li>再分散を行わないとMapジョブだけで処理するので、Hadoopが処理が進んでいないと判断する</li>
+    </ul>
+  </li>
+  <li>投機的実行を無効にする
+    <ul>
+      <li>EmbulkはMapReduceジョブの終了ステータスを無視する</li>
+      <li>自身でステートファイルを書き出して終了ステータスを判断する</li>
+      <li>投機的実行で、一部ジョブが強制終了するとそれをエラーと報告する</li>
+    </ul>
+  </li>
+  <li>再分散を行わない場合はmap側にメモリを振り分ける
+    <ul>
+      <li>Reduce側はダミーなのでメモリが無駄になる</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
 <section>
 
 <h2>追加jars</h2>
-<pre><code class="yaml">exec:
+
+<pre><code class="language-yaml">exec:
   type: mapreduce
   config_files:
     # ...
@@ -173,6 +170,7 @@ out:
     - /home/hadoop/.m2/repository/ch/qos/logback/logback-classic/1.1.3/logback-classic-1.1.3.jar
   exclude_jars: [log4j-over-slf4j.jar, log4j-core-*, slf4j-log4j12*]
 </code></pre>
+
 <p>その他、プラグインが必要とする依存関係がちゃんと解決されてない場合があるので別途追加しておく必要がある。</p>
 
 </section>
@@ -181,24 +179,21 @@ out:
 <h2>追加jars解説</h2>
 
 <ul>
-<li>embulk本体がlogbackの実装に直接依存している
-
-<ul>
-<li>(これあんま良くないんじゃないか)</li>
-</ul>
-</li>
-<li>EMR上のHadoopはslf4j-log4jを使ってる様でlogback持ってない
-
-<ul>
-<li>ログ吐けなくて死ぬ</li>
-</ul>
-</li>
-<li>loggerの実装選択で競合しない様にexcludeで調節する必要があるかもしれない
-
-<ul>
-<li>自分は適当にそれっぽいのをexcludeしたら一応動作したが本当に必要かは未検証</li>
-</ul>
-</li>
+  <li>embulk本体がlogbackの実装に直接依存している
+    <ul>
+      <li>(これあんま良くないんじゃないか)</li>
+    </ul>
+  </li>
+  <li>EMR上のHadoopはslf4j-log4jを使ってる様でlogback持ってない
+    <ul>
+      <li>ログ吐けなくて死ぬ</li>
+    </ul>
+  </li>
+  <li>loggerの実装選択で競合しない様にexcludeで調節する必要があるかもしれない
+    <ul>
+      <li>自分は適当にそれっぽいのをexcludeしたら一応動作したが本当に必要かは未検証</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -207,8 +202,8 @@ out:
 <h2>バッチの実行方法</h2>
 
 <ul>
-<li>自作のワークフロー管理gemを利用</li>
-<li>embulkをEMR上で実行する処理を自動化するgemを作成</li>
+  <li>自作のワークフロー管理gemを利用</li>
+  <li>embulkをEMR上で実行する処理を自動化するgemを作成</li>
 </ul>
 
 </section>
@@ -217,25 +212,26 @@ out:
 <h2>emrakul</h2>
 
 <ul>
-<li>EMRのAPIを叩いてクラスタを起動</li>
-<li>sshkitを利用してマスターノードに接続</li>
-<li>マスターノードにembulkとGemfileを転送</li>
-<li>プラグインのインストール</li>
-<li>追加でスクリプトを実行する
-
-<ul>
-<li>mavenで依存対象のjarをDLする</li>
-<li>S3から追加で必要な認証情報を取得</li>
-<li>KMSで暗号化済み</li>
-</ul>
-</li>
-<li>マスターノード上でembulkを実行
-
-<ul>
-<li>ログはsshkitで出力 + YARNマネージャーで確認</li>
-</ul>
-</li>
-<li>終了したらクラスタを落とす</li>
+  <li>EMRのAPIを叩いてクラスタを起動</li>
+  <li>sshkitを利用してマスターノードに接続</li>
+  <li>マスターノードにembulkとGemfileを転送</li>
+  <li>プラグインのインストール</li>
+  <li>追加でスクリプトを実行する
+    <ul>
+      <li>mavenで依存対象のjarをDLする</li>
+      <li>S3から追加で必要な認証情報を取得
+        <ul>
+          <li>KMSで暗号化済み</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>マスターノード上でembulkを実行
+    <ul>
+      <li>ログはsshkitで出力 + YARNマネージャーで確認</li>
+    </ul>
+  </li>
+  <li>終了したらクラスタを落とす</li>
 </ul>
 
 </section>
@@ -244,8 +240,8 @@ out:
 <h2>Tips</h2>
 
 <ul>
-<li>時間軸でパーティションしない場合は、一回embulkを噛まして入力ファイルを事前に分割する</li>
-<li>直接HDFSに書き込むのは、今のところEMRでは難しい、S3を入出力の場所に使うのが良い</li>
+  <li>時間軸でパーティションしない場合は、一回embulkを噛まして入力ファイルを事前に分割する</li>
+  <li>直接HDFSに書き込むのは、今のところEMRでは難しい、S3を入出力の場所に使うのが良い</li>
 </ul>
 
 </section>
