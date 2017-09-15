@@ -7,6 +7,12 @@
 
 ---
 
+# Sorry, I talk in Japanese
+# very fastly :sweat_smile:
+# I will upload this slides later
+
+---
+
 # self.inspect
 - @joker1007
 - Repro inc. CTO
@@ -128,7 +134,7 @@ foo #=> Like [[1,2,3], [5,8,13], [0,0,0]] objects
 
 ## binding_ninja
 - **this gem passes binding of method caller implicity**
-- **Lightweight replacement of binding_of_caller**
+- **Lightweight alternative of binding_of_caller**
 
 ```ruby
 class Foo
@@ -186,6 +192,30 @@ Because Ruby level `cfp` is not changed.
     rb_define_method_id(ext_mod, SYM2ID(method_sym),
       auto_inject_binding_invoke, -1);
 ```
+
+---
+
+## Compare to binding_of_caller
+
+```
+Warming up --------------------------------------
+               plain   343.111k i/100ms
+       binding_ninja   150.293k i/100ms
+   binding_of_caller     7.002k i/100ms
+Calculating -------------------------------------
+               plain      7.046M (± 0.2%) i/s -     35.340M in   5.015789s
+       binding_ninja      2.177M (± 0.4%) i/s -     10.971M in   5.040844s
+   binding_of_caller     71.916k (± 1.1%) i/s -    364.104k in   5.063466s
+
+Comparison:
+               plain:  7045866.1 i/s
+       binding_ninja:  2176528.7 i/s - 3.24x  slower
+   binding_of_caller:    71916.4 i/s - 97.97x  slower
+```
+
+30x faster and very simple code, but restricted.
+binding_ninja get only direct caller binding.
+
 
 ---
 
