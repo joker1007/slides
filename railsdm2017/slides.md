@@ -118,9 +118,8 @@ RailsのDocker化における鬼門
 
 ビルドサーバーのボリュームをマウントし、assets:precompileのキャッシュを永続化する
 キャッシュファイルが残っていれば、高速にコンパイルが終わる。
-管理が楽でストレスも余り無い。
 ついでにmanifestをRAILS_ENV毎にrenameしてS3に保存しておく。
-この時、コミットのSHA1を名前に含めておく。build時にargでふよ
+この時、コミットのSHA1を名前に含めておく。(build時にargで付与したもの)
 
 ```ruby
 execute(:docker, "run --rm -e RAILS_ENV=#{fetch(:rails_env)} -e RAILS_GROUPS=assets -v #{fetch(:docker_build_base_dir)}/tmp:/app/tmp #{fetch(:docker_tag_full)} rake assets:precompile assets:sync assets:manifest_upload")
@@ -140,4 +139,78 @@ ENTRYPOINTで強制的に実行する処理で環境毎の差異を吸収する�
 
 ---
 
+# 秘匿値の扱い
+- 設定ファイル自体を暗号化してイメージに突っ込む
+  - 環境変数で直接突っ込むとECSのconsoleに露出する
+  - コンテナ起動時に起動環境の権限で複合化できると良い
+  - prehookで複合化処理を行う
 
+---
+
+# yaml_vault
+https://github.com/joker1007/yaml_vault
+
+- KMS, GCP-KMSに対応
+- KMSを利用すると秘匿値にアクセスできる権限をIAMで管理できる
+- クラスタに所属しているノードのIAM Roleで複合化
+- 設定をファイルに一元化しつつ安全に管理できる
+
+---
+
+# 開発環境
+
+docker-composeとディレクトリマウントで工夫する
+
+---
+
+```yaml
+version: "2"
+services:
+  datastore:
+    image: busybox
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - vendor_bundle:/app/vendor/bundle
+      - bundle:/app/.bundle
+```
+
+---
+
+```yaml
+  mysql:
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - '3306:3306'
+    volumes_from:
+      - datastore
+
+```
+
+---
+
+```yaml
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    environment:
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: password
+      MYSQL_HOST: mysql
+    depends_on:
+      - mysql
+    volumes:
+      - .:/repro
+    volumes_from:
+      - datastore
+    tmpfs:
+      /repro/tmp/pids
+```
+
+---
+
+# 
+
+---
