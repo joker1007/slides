@@ -32,8 +32,9 @@
 
 ---
 
-割とコンテナ周りは色々と発表した。
-2017年末ってことで1年ぐらいの成果を総括して話をします。
+# 割とコンテナ周りは色々と発表した。
+# 2017年末ってことで1年ぐらいの成果を総括して話をします。
+### (時間足りないかも……)
 
 ---
 
@@ -43,6 +44,7 @@
 - 使えるリソースを計測し、自動でコンテナの配置先をコントロールしてくれる
 - kubernetesではない。最近、kubernetesが覇権取った感があって割と辛い
 - 今はEC2が割とバックエンドに透けて見えるのだが、Fargateに超期待
+- ECS or EKS :tired_face:
 
 ---
 
@@ -57,7 +59,7 @@
 
 ---
 
-```
+```dockerfile
 FROM 113190696079.dkr.ecr.ap-northeast-1.amazonaws.com/repro/base:ruby-2.4.2-node-8.1.2-yarn-1.2.1-debian-rev1
 
 ENV DOCKER 1
@@ -66,8 +68,8 @@ ENV DOCKER 1
 RUN <package install>
 
 # install yarn package
-WORKDIR /root
-COPY package.json yarn.lock /root/
+WORKDIR /yarn
+COPY package.json yarn.lock /yarn/
 RUN yarn install --prod --pure-lockfile && yarn cache clean
 
 # install gems
@@ -83,9 +85,9 @@ RUN bundle install -j3 --retry 6 --without test development --no-cache --deploym
 # Rails app directory
 WORKDIR /app
 COPY . /app
-RUN ln -sf /root/node_modules /app/node_modules && \
+RUN ln -sf /yarn/node_modules /app/node_modules && \
   mkdir -p vendor/assets tmp/pids tmp/sockets tmp/sessions && \
-  cp config/unicorn/docker.rb config/unicorn.rb
+  cp config/unicorn.rb.production config/unicorn.rb
 
 ENTRYPOINT [ \
   "prehook", "ruby -v", "--", \
@@ -93,7 +95,7 @@ ENTRYPOINT [ \
 
 CMD ["bundle", "exec", "unicorn_rails", "-c", "config/unicorn.rb"]
 
-ARG git_sha1
+ARG git_sha1 # どのコミットなのか中から分かる様にする
 
 RUN echo "${git_sha1}" > revision.log
 ENV GIT_SHA1 ${git_sha1}
@@ -111,7 +113,7 @@ ENV GIT_SHA1 ${git_sha1}
 ---
 
 # assets:precompile
-RailsのDocker化における鬼門
+RailsのDocker化における鬼門の一つ
 
 - S3 or CDNを事前に整備しておくこと
 - ビルド時に解決するがビルド自体とは独立させる
@@ -119,16 +121,19 @@ RailsのDocker化における鬼門
 
 ---
 
-ビルドサーバーのボリュームをマウントし、assets:precompileのキャッシュを永続化する
-キャッシュファイルが残っていれば、高速にコンパイルが終わる。
-ついでにmanifestをRAILS_ENV毎にrenameしてS3に保存しておく。
+- ビルドサーバーのボリュームをマウントし、assets:precompileのキャッシュを永続化する
+- キャッシュファイルが残っていれば、高速にコンパイルが終わる
+- manifestをRAILS_ENV毎にrenameしてS3に保存しておく
 この時、コミットのSHA1を名前に含めておく。(build時にargで付与したもの)
 
 ```sh
 docker run --rm \
   -e RAILS_ENV=<RAILS_ENV> -e RAILS_GROUPS=assets \
   -v build_dir/tmp:/app/tmp app_image_tag \
-  rake assets:precompile assets:sync assets:manifest_upload
+  rake \
+    assets:precompile \
+    assets:sync \
+    assets:manifest_upload
 ```
 
 
@@ -136,7 +141,7 @@ docker run --rm \
 
 # prehook
 
-ENTRYPOINTで強制的に実行する処理で環境毎の差異を吸収する。
+ENTRYPOINTで強制的に実行する処理で環境毎の差異を吸収する
 
 - ERBで設定ファイル生成
 - 秘匿値の準備
@@ -148,7 +153,8 @@ ENTRYPOINTで強制的に実行する処理で環境毎の差異を吸収する�
 # 秘匿値の扱い
 - 設定ファイル自体を暗号化してイメージに突っ込む
   - 環境変数で直接突っ込むとECSのconsoleに露出する
-  - コンテナ起動時に起動環境の権限で複合化できると良い
+  - 値の種類が多いと環境変数管理する場所が必要になる
+- コンテナ起動時に起動環境の権限で複合化できると良い
   - prehookで複合化処理を行う
 
 ---
@@ -156,16 +162,19 @@ ENTRYPOINTで強制的に実行する処理で環境毎の差異を吸収する�
 # yaml_vault
 https://github.com/joker1007/yaml_vault
 
-- KMS, GCP-KMSに対応
+- Rails5で入った、encrypted secrets.ymlの拡張版
+- AWS-KMS, GCP-KMSに対応している
 - KMSを利用すると秘匿値にアクセスできる権限をIAMで管理できる
 - クラスタに所属しているノードのIAM Roleで複合化
 - 設定をファイルに一元化しつつ安全に管理できる
+- Railsの場合、secrets.ymlをメモリ上で複合化して起動できる
+  - ファイルに展開後の値が残らない
 
 ---
 
 # 開発環境
 
-docker-composeとディレクトリマウントで工夫する
+## docker-composeとディレクトリマウントで工夫する
 
 ---
 
@@ -178,6 +187,23 @@ services:
       - mysql-data:/var/lib/mysql
       - vendor_bundle:/app/vendor/bundle
       - bundle:/app/.bundle
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    environment:
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: password
+      MYSQL_HOST: mysql
+    depends_on:
+      - mysql
+    volumes:
+      - .:/app
+    volumes_from:
+      - datastore
+    tmpfs:
+      /app/tmp/pids
 ```
 
 ---
@@ -191,35 +217,23 @@ services:
       - '3306:3306'
     volumes_from:
       - datastore
-
 ```
 
 ---
 
-```yaml
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile-dev
-    environment:
-      MYSQL_USERNAME: root
-      MYSQL_PASSWORD: password
-      MYSQL_HOST: mysql
-    depends_on:
-      - mysql
-    volumes:
-      - .:/repro
-    volumes_from:
-      - datastore
-    tmpfs:
-      /repro/tmp/pids
-```
+# Macの場合
+- ちなみにボリュームマウントが死ぬ程遅いので、何らかの工夫が必要
+- dinghyかdocker-syncで頑張る
+  - どっちも辛い
+- Mac捨てるのがオススメ
+  - GentooっていうLinuxがあってだな……
+
 
 ---
 
-# 開発スタイル
+# 俺の開発スタイル
 
-- 開発用Dockerfileにzshや各種コマンドを入れておく
+- 開発用Dockerfileでzshや各種コマンドを入れておく
 - `docker-compose run --service-ports app zsh`
 - シェルスクリプトで自分の.zshrcやpeco等をコピーし`docker exec zsh`
 - ファイルの編集だけはホストマシンで行い、後は基本的にコンテナ内で操作する
@@ -294,6 +308,7 @@ https://github.com/reproio/ecs_deploy
 - capistrano plugin
 - TaskDefinitionとServiceの更新を行う
 - Service更新後デプロイ状況が収束するまで待機する
+- 更新したTaskDefinitionのrevisionを他のタスクで参照できる
 - TaskDefinitionやServiceの定義はRubyのHashで行う
   - Hash化できれば何でも良いので、YAMLでもJSONでも
 
@@ -304,16 +319,18 @@ https://github.com/reproio/ecs_deploy
 - 既存の資産が多数ある
   - slack通知のフックとか
 - デプロイのコマンドが変化しない
-- 設定ファイルの場所や定義も変化しない
+- 設定ファイルの場所や定義も大きく変化しない
 
 ---
 
 # Autoscale (近い内に不要になる話)
 Fargate Tokyoリージョンはよ！
 
-- 現時点でServiceのスケールとEC2のスケールは独立している
+- 現時点でECS ServiceのスケールとEC2のスケールは独立している
 - Service増やしてもEC2のノードを増やさないとコンテナを立てるところがない
 - 増やすのは簡単だが減らす時の対象をコントロールできない
+
+というわけでデフォルトで良い方法がない。
 
 ---
 
@@ -336,7 +353,7 @@ auto_scaling_groups:
     buffer: 1 # タスク数に対する余剰のインスタンス数
 
 services:
-  - name: repro-api-production
+  - name: app-production
     cluster: ecs-cluster
     region: ap-northeast-1
     auto_scaling_group_name: ecs-cluster-nodes
@@ -376,7 +393,7 @@ services:
 
 # コマンド実行とログ収集
 ECSにおいて特定のノードにログインするというのは負けである
-rails runnerやrakeをSSHでログインして実行とかやるべきではない
+rails runnerやrakeをSSHで実行とかやるべきではない
 そのサーバーの運用管理をしなければならなくなる
 
 ---
@@ -385,10 +402,11 @@ rails runnerやrakeをSSHでログインして実行とかやるべきではな�
 https://github.com/reproio/wrapbox
 
 - ECS用のコマンドRunner
+  - 半端に汎用性を持たせようとしたんでコードが微妙に……
 - TaskDefinitionを生成、登録し、即起動する
 - 終了までステータスをポーリングし待機する
-- IAMでクラスタ単位でタスク起動権限を管理する
-- 慣れるとSSHとかデプロイ不要でむしろ楽
+- タスク起動権限はIAMでクラスタ単位で管理できる
+- 慣れるとSSHとかデプロイが不要でむしろ楽
 
 ---
 
@@ -407,10 +425,10 @@ default:
 
 ---
 
-# wrapboxのコンテナ実行ログの取得
+# wrapboxで実行したコマンドログの取得
 
-papertrailにログを転送し、別スレッドでポーリングしてコンソールに流すことができる。
-原理的に他のログ集約サービスでも実現可能だが、現在papertrailしか実装はない。
+- papertrailにログを転送し、別スレッドでポーリングしてコンソールに流すことができる
+- 原理的に他のログ集約サービスでも実現可能だが、現在papertrailしか実装はない
 
 ---
 
@@ -461,6 +479,7 @@ end
 
 ```ruby
 set :ecs_executions_before_deploy, -> do
+  # ecs_deployの結果からTaskDefを取得
   rake = fetch(:ecs_registered_tasks)["ap-northeast-1"]["rake"]
   raise "Not registered new task" unless rake
 
@@ -485,7 +504,7 @@ end
 - migrateのupとdownがめんどい
  - 特に開発者用ステージング
 - ridgepoleならデプロイ時に実行するだけで、ほぼ収束する
-- エラーが起きたらslackにログが出るので手動で直す
+- エラーが起きたらslackにログを出して、手動で直す
 - productionはdiffがあればリリースを停止させる
 - diffを見てリリース担当者が手動でDDLを発行する
 
@@ -496,3 +515,6 @@ end
 https://speakerdeck.com/joker1007/dockershi-dai-falsefen-san-rspechuan-jing-falsezuo-rifang
 
 ---
+
+# コンテナを真面目に運用するためには、結構色々考えることがある
+# 何かしら参考になれば幸いです
