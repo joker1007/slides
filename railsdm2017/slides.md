@@ -219,6 +219,33 @@ services:
 
 # 開発スタイル
 
+- 開発用Dockerfileにzshや各種コマンドを入れておく
+- `docker-compose run --service-ports app zsh`
+- シェルスクリプトで自分の.zshrcやpeco等をコピーし`docker exec zsh`
+- ファイルの編集だけはホストマシンで行い、後は基本的にコンテナ内で操作する
+
+---
+
+```sh
+set -e
+
+container_name=$1
+
+cp_to_container()
+{
+  if ! docker exec ${container_name} test -e $2; then
+    docker cp -L $1 ${container_name}:$2
+  fi
+}
+
+cp_to_container ~/.zshrc /root/.zshrc
+if ! docker exec ${container_name} test -e /usr/bin/peco; then
+  docker exec ${container_name} sh -c "curl -L -o /root/peco.tar.gz https://github.com/peco/peco/releases/download/v0.4.5/peco_linux_amd64.tar.gz && tar xf /root/peco.tar.gz -C /root && cp /root/peco_linux_amd64/peco /usr/bin/peco"
+fi
+
+docker exec -it ${container_name} sh -c "export TERM=${TERM}; exec zsh"
+```
+
 ---
 
 # デプロイの前に
