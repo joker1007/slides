@@ -1,4 +1,5 @@
 # Professional Rails on ECS
+### @joker1007
 
 ---
 
@@ -16,7 +17,8 @@
 # Repro.inc について
 - モバイルアプリケーションの行動トラッキング
 - 分析結果の提供と、それと連動したマーケティングの提供
-- インフラは大体コード化済み
+- 主にAWSでBigqueryだけGCP
+- コンテナ化対応企業
 - Ruby biz Grand prix 2017 最終選考対応企業
 
 ---
@@ -40,7 +42,7 @@
 
 # ECSとは
 
-- Dockerコンテナを稼動するためのクラスタを管理してくれるサービス
+- Dockerコンテナを稼動するためのクラスタを管理してくれるAWSのサービス
 - 使えるリソースを計測し、自動でコンテナの配置先をコントロールしてくれる
 - kubernetesではない。最近、kubernetesが覇権取った感があって割と辛い
 - 今はEC2が割とバックエンドに透けて見えるのだが、Fargateに超期待
@@ -60,7 +62,7 @@
 ---
 
 ```dockerfile
-FROM 113190696079.dkr.ecr.ap-northeast-1.amazonaws.com/repro/base:ruby-2.4.2-node-8.1.2-yarn-1.2.1-debian-rev1
+FROM ruby:2.4.2
 
 ENV DOCKER 1
 
@@ -116,7 +118,7 @@ ENV GIT_SHA1 ${git_sha1}
 RailsのDocker化における鬼門の一つ
 
 - S3 or CDNを事前に整備しておくこと
-- ビルド時に解決するがビルド自体とは独立させる
+- ビルド時に解決するがビルド自体とは独立させる (イメージには含めない)
 - docker buildした後で、docker runで実行する
 
 ---
@@ -141,20 +143,21 @@ docker run --rm \
 
 # prehook
 
-ENTRYPOINTで強制的に実行する処理で環境毎の差異を吸収する
+ENTRYPOINTで強制的に実行する処理で各デプロイ環境毎の差異を吸収する
 
 - ERBで設定ファイル生成
 - 秘匿値の準備
-- assets manifestの準備
-  - さっきRAILS_ENV毎に名前付けてuploadしてたのをDLしてくる
+- assets manifestの取得
+  - さっきRAILS_ENV、コミット毎に名前付けてuploadしてたのをDLしてくる
 
 ---
 
-# 秘匿値の扱い
+# 秘匿値の扱い (弊社の場合)
 - 設定ファイル自体を暗号化してイメージに突っ込む
+  - 普通にgitで管理できて楽
   - 環境変数で直接突っ込むとECSのconsoleに露出する
-  - 値の種類が多いと環境変数管理する場所が必要になる
-- コンテナ起動時に起動環境の権限で複合化できると良い
+  - 値の種類が多いと環境変数管理する場所が結局必要になる
+- コンテナ起動時に起動環境の権限で複合化する
   - prehookで複合化処理を行う
 
 ---
@@ -163,7 +166,7 @@ ENTRYPOINTで強制的に実行する処理で環境毎の差異を吸収する
 https://github.com/joker1007/yaml_vault
 
 - Rails5で入った、encrypted secrets.ymlの拡張版
-- AWS-KMS, GCP-KMSに対応している
+- Passphrase, AWS-KMS, GCP-KMSに対応している
 - KMSを利用すると秘匿値にアクセスできる権限をIAMで管理できる
 - クラスタに所属しているノードのIAM Roleで複合化
 - 設定をファイルに一元化しつつ安全に管理できる
@@ -183,7 +186,7 @@ version: "2"
 services:
   datastore:
     image: busybox
-    volumes:
+    volumes: #ちゃんと永続化する場所を定義しておく
       - mysql-data:/var/lib/mysql
       - vendor_bundle:/app/vendor/bundle
       - bundle:/app/.bundle
@@ -199,7 +202,7 @@ services:
     depends_on:
       - mysql
     volumes:
-      - .:/app
+      - .:/app # プロジェクトディレクトリをマウント
     volumes_from:
       - datastore
     tmpfs:
@@ -208,21 +211,8 @@ services:
 
 ---
 
-```yaml
-  mysql:
-    image: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-    ports:
-      - '3306:3306'
-    volumes_from:
-      - datastore
-```
-
----
-
-# Macの場合
-- ちなみにボリュームマウントが死ぬ程遅いので、何らかの工夫が必要
+# ちなみにMacの場合
+- ボリュームマウントが死ぬ程遅いので、何らかの工夫が必要
 - dinghyかdocker-syncで頑張る
   - どっちも辛い
 - Mac捨てるのがオススメ
@@ -235,7 +225,9 @@ services:
 
 - 開発用Dockerfileでzshや各種コマンドを入れておく
 - `docker-compose run --service-ports app zsh`
-- シェルスクリプトで自分の.zshrcやpeco等をコピーし`docker exec zsh`
+  - 一回shellを挟むのはサーバープロセスの再起動のため
+- シェルスクリプトで自分の.zshrcやpeco等を`docker cp`で突っ込む
+- その後`docker exec zsh`でzshを起動して中に入る
 - ファイルの編集だけはホストマシンで行い、後は基本的にコンテナ内で操作する
 
 ---
@@ -262,8 +254,8 @@ docker exec -it ${container_name} sh -c "export TERM=${TERM}; exec zsh"
 
 ---
 
-# デプロイの前に
-# ECSの概念について
+# デプロイの解説の前に
+# ECSの概念について少し
 
 ---
 
@@ -273,14 +265,15 @@ docker exec -it ${container_name} sh -c "export TERM=${TERM}; exec zsh"
   - イメージ、CPUのメモリ使用量、ポート、ボリューム等
   - 物理的に同じノードで動作する
 - docker-composeの設定一式みたいなもの
-- kubernetesでいうPod
+- kubernetesでいうPodに近い
+- 単調増加するrevision番号でバージョン管理される
 
 ---
 
 # Task
 
 - TaskDefinitionから起動されたコンテナ群
-- 同一のTaskDefinitionから複数起動される
+- 同一のTaskDefinitionから複数セット起動できる
 
 ---
 
@@ -296,8 +289,8 @@ docker exec -it ${container_name} sh -c "export TERM=${TERM}; exec zsh"
 
 # ECSへのデプロイの基本
 
-1. TaskDefinitionを更新
-1. Serviceを更新
+1. TaskDefinitionを更新しバージョン番号を上げる
+1. Serviceを更新し、新しいバージョンを参照する
 1. 後はECSに任せる
 
 ---
@@ -319,12 +312,14 @@ https://github.com/reproio/ecs_deploy
 - 既存の資産が多数ある
   - slack通知のフックとか
 - デプロイのコマンドが変化しない
+- 一気にコンテナ化することは早々無いので並行運用が楽
 - 設定ファイルの場所や定義も大きく変化しない
 
 ---
 
-# 個人別ステージング環境
-- アプリサーバーだけで良いなら容易に実現可能
+# 個人別ステージング環境へのデプロイ
+コンテナ化すると簡単に開発者が好きに使えるデプロイ先が手に入る
+- アプリサーバーだけで良いなら割と容易に実現可能
 - RDB等のデータストアを個別に持つなら色々難しい
 - 弊社はアプリサーバーだけ個別にデプロイ可能
 - データストアを弄る場合はフルセットの環境を使い、そこを占有する
@@ -337,21 +332,23 @@ terraform等で以下のものを準備する
 - ALBを一つ用意する
 - 個人別のサブドメインをRoute53に定義
 - ALBのTarget Groupを個人別に定義
-- ALBのホストベースルーティングを定義
+- ALBのホストベースルーティングを定義して、各Target Groupに関連付け
 
 その後capistranoにmemberという環境を定義し、各メンバーが自分の名前でtarget_ groupやTaskDefinitionの名前を使ってデプロイ出来る様に諸々を変数化する
+
+Serviceの仕組みを使うことで、各々の開発者自分のデプロイ先を意識しなくてもノードが勝手にTarget Groupに所属してトラフィックが流れてくる
 
 ---
 
 # terraformの例
 
-後で貼る
+<かなり長くなるので、後日貼ります>
 
 ---
 
 # デプロイ定義の例
 
-後で貼る
+<同上>
 
 ---
 
@@ -419,14 +416,15 @@ services:
 
 ---
 
-# まあ、Fargateで不要になると思う
+# まあ、Fargateで不要になると思う :tired_face:
 
 ---
 
 # コマンド実行とログ収集
 ECSにおいて特定のノードにログインするというのは負けである
 rails runnerやrakeをSSHで実行とかやるべきではない
-そのサーバーの運用管理をしなければならなくなる
+コンテナ外にそういう場所を用意するのもダサい
+そのサーバーの構成管理をしなければならなくなる
 
 ---
 
@@ -434,14 +432,15 @@ rails runnerやrakeをSSHで実行とかやるべきではない
 https://github.com/reproio/wrapbox
 
 - ECS用のコマンドRunner
-  - 半端に汎用性を持たせようとしたんでコードが微妙に……
-- TaskDefinitionを生成、登録し、即起動する
+  - 半端に素のdockerとの汎用性を持たせようとしたんでコードが微妙に……
+- TaskDefinitionを生成、登録し、即タスクを起動する
 - 終了までステータスをポーリングし待機する
-- タスク起動権限はIAMでクラスタ単位で管理できる
-- 慣れるとSSHとかデプロイが不要でむしろ楽
+- タスク起動権限はIAMを使ってクラスタ単位で管理できる
+- 慣れるとSSHとかデプロイが不要だし、権限管理が固いのでむしろ楽
 
 ---
 
+config
 ```yaml
 default:
   region: ap-northeast-1
@@ -455,6 +454,16 @@ default:
       - {name: "RAILS_ENV", value: "<%= ENV["RAILS_ENV"] %>"}
 ```
 
+実行例
+```
+GIT_SHA1=`git rev-parse HEAD` RAILS_ENV=dev_staging \
+  be wrapbox ecs run_cmd -f config/wrapbox.yml \
+    -c repro-development --cpu=1024 --memory=2048 \
+    "bundle exec ./bin/embulk_runner users_to_bigquery"
+```
+
+設定とイメージファイルを工夫することで、任意のコミットの状態でコマンドを実行できる。
+
 ---
 
 # wrapboxで実行したコマンドログの取得
@@ -464,13 +473,14 @@ default:
 
 ---
 
+config
 ```
 default:
   # 省略
   log_fetcher:
     type: papertrail # Use PAPERTRAIL_API_TOKEN env for Authentication
     group: "<%= ENV["RAILS_ENV"] %>"
-    query: wrapbox-default
+    query: wrapbox-default # syslogのタグと揃える
   log_configuration:
     log_driver: syslog
     options:
@@ -537,8 +547,9 @@ end
  - 特に開発者用ステージング
 - ridgepoleならデプロイ時に実行するだけで、ほぼ収束する
 - エラーが起きたらslackにログを出して、手動で直す
-- productionはdiffがあればリリースを停止させる
-- diffを見てリリース担当者が手動でDDLを発行する
+- productionはそもそも自動適用を止めた
+- diffがあればリリースを停止させる
+- diffを見てリリース担当者(俺ともう一人)が手動でDDLを発行する
 
 ---
 
@@ -548,5 +559,6 @@ https://speakerdeck.com/joker1007/dockershi-dai-falsefen-san-rspechuan-jing-fals
 
 ---
 
-# コンテナを真面目に運用するためには、結構色々考えることがある
+# 長々と色々と解説しましたが、
+# コンテナを真面目に運用するためには、結構色々考えることがあります
 # 何かしら参考になれば幸いです
