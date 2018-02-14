@@ -1,11 +1,12 @@
 # プラグイン開発者から見るv1.0の活用法
 
-### @joker1007
+### @joker1007 (Tomohiro Hashidate)
 
 ---
 
-## self.inspect
+# self.inspect
 
+- @joker1007
 - Repro inc. CTO
 - やってること
   - DBのスキーマ改善、データ仕様の変更
@@ -13,26 +14,30 @@
   - Bigqueryやhive, prestoを使ったバッチフローの設計構築
   - インフラのコード化とメンテ
   - Docker, ECSの利用環境を整備
+  - 外向きの技術発表
 
 ---
 
-## 狩人業
+# 狩人業
 8年ぶりぐらいに狩人になりました。(1日の時間が足りない!)
+ガンランス使いですが、最近操虫棍も使い始めた。
+![monhan](monhan.jpg)
 
 ---
 
-## fluentdとの関わり
-- 一昨年ぐらいから社内でデータフローを構築する基盤として採用。
+# fluentdとの関わり
+- 一昨年ぐらいから社内でデータフローを構築する基盤として採用
 - それまでは余り触ってなかった
 - ちょうど0.14が出たぐらいの時期
 - 主にアプリデータをBQとS3に転送するために利用している
-- 0.14には比較的早めにアップデートして利用を開始、現在1.0.2。
+- 0.14には比較的早めにアップデートして利用を開始
+- 現在1.0.2、そろそろ上げたい
 
 ---
 
-## プラグイン開発とメンテナ業
+# プラグイン開発とメンテナ業
 使い始めると色々と不満が出てくるので、PRを出したり自分で作ったりすることになる。
-割とメンテを諦めているプラグインがいくつかあるので、PRを何度か出した上で、話をしてコミット権を頂くことになったものがいくつかある。
+割とメンテを諦めているプラグインがいくつかあるようなので、PRを何度か出した上で、話をしてコミット権を頂くことになったものがいくつか。
 
 - fluent-plugin-cloudwatch-put (作者)
 - fluent-plugin-filter-single_key (作者)
@@ -44,26 +49,26 @@
 
 ---
 
-## fluent-plugin-bigquery
+# fluent-plugin-bigquery
 メインで触る人が転々と移り変わって、今私が良く弄っている。
 
 - いかつい
 - 複雑
 - 総ダウンロード数が多い
 
-開発する上で知見をいくつか獲得
+開発する上で知見をいくつか獲得したので、その辺を元に話を。
 
 ---
 
-## v1.0(v0.14)の利点
-### parser, formatter, bufferが明確に分離されたconfigセクションとして独立したこと
+# プラグイン開発者から見たv1.0の利点
+## parser, formatter, bufferが明確に分離され、configセクションとして独立したこと
 今迄、inputやoutputプラグインの中でフラットに設定が記述されていて、標準的なやり方が無かった。
-v1.0になることで、それらを選択設定する方法が確定したので、各プラグインに対するポータビリティがめっちゃ向上した。
-filterで頑張って加工しなくても、データの入出力に任意のフォーマットを利用できる様になった。
+v1.0になることで、それらを選択設定する方法の標準ができたので、各プラグインに対するポータビリティがめっちゃ向上した。
+filterで頑張って加工したりmixinを突っ込まなくても、データの入出力に任意のフォーマットを利用できる。
 
 ---
 
-## プラグイン開発者がやるべきこと
+# プラグイン開発者がやるべきこと
 独自のパース処理やフォーマット処理ではなくplugin helperを利用する
 
 ```ruby
@@ -83,19 +88,19 @@ end
 
 ---
 
-## v1.0のoutputプラグイン開発
+# v1.0のoutputプラグイン開発
 最も大きく機能が変わったのがoutputプラグインのAPI
 
 - metadataを利用したchunkをサポート
-- これによりTimeSlicedの区別が無くなる
+  - これによりTimeSlicedの区別が無くなる
 - delay commitのサポート
 - chunk_limit_recordsのサポート
 
-これに加えて各種プラグインヘルパーにより開発がとても楽になった。
+加えて各種プラグインヘルパーにより開発がとても楽になった。
 
 ---
 
-## chunk with metadata
+# chunk with metadata
 v1.0からmetadataをキーにしてbuffer chunkを分けられる様になった。
 metadataとは以下のものを差す。
 
@@ -129,23 +134,25 @@ metadataとは以下のものを差す。
 
 ```ruby
 placeholder_params =
-  "project=#{@project}/dataset=#{@dataset}/table=#{@tablelist.join(",")}/fetch_schema_table=#{@fetch_schema_table}/template_suffix=#{@template_suffix}"
+  "project=#{@project}/dataset=#{@dataset}/...省略"
+  
 placeholder_validate!(:bigquery, placeholder_params)
 ```
 
 ```ruby
-project = extract_placeholders(@project, chunk.metadata)
-dataset = extract_placeholders(@dataset, chunk.metadata)
+project = extract_placeholders(@project,chunk.metadata)
+dataset = extract_placeholders(@dataset,chunk.metadata)
 ```
 
 ---
 
 ## metadataとplaceholderによりforestプラグインが不要になる
 ## ただし、どの項目でplaceholderが利用できるかはプラグインの対応状況によって変わる
+## プラグイン開発者は使えそうな所にガンガンplaceholderサポートを追加して欲しい
 
 ---
 
-## helperによるデータ加工方法の共通化
+# helperによるデータ加工方法の共通化
 よく利用する処理がplugin helperとして再利用可能になり、configの項目も標準化されたため、プラグインでのデータ加工が簡単になった。
 利用しやすいものは以下。
 
@@ -161,19 +168,22 @@ dataset = extract_placeholders(@dataset, chunk.metadata)
 
 ---
 
-## その他、プラグイン開発で意識しておくこと
+# その他プラグイン開発で意識すること
 
 - 多機能化はダメ絶対！
   - fluent-plugin-bigqueryは悪い例
-- 本体に組込みのhelperやその組み合わせで解決できないか考えること
+  - 私がloadとか追加してしまったので、整理したい……
+- 組込のhelperやその組み合わせで解決できないか考える
   - threadや子プロセスを利用する場合のハンドリング等
+  - 大分便利になってるので、plugin_helpers以下は一通り読んでおくと良い
 - 無理にマルチバージョンサポートをしない
-  - 0.12系はそろそろ機能追加等を打ち切って良い
+  - 0.12系はそろそろ機能追加等を打ち切って良いと思う
+  - 設定の互換性は維持できても、同一のコードベースではplaceholder等が使えない
 - どうにもメンテできない場合は、人に譲る
 
 ---
-
-## v1.0は便利！
+# まとめ
+## v1.0は開発者にとってめっちゃ便利になってる！
 ## まだ0.12系を利用しているなら、頑張って上げる価値がある
 ## 特にプラグイン自体の構造をシンプルに維持したまま柔軟性を上げられる点が大きい
 ## 自分のプラグインの改修や、PRを出すチャンスも
