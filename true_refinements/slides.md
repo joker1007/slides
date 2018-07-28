@@ -10,11 +10,10 @@
 ---
 
 # しかし理想的ではない
-# 何とかしてこんな風に書きたい
+# 何とかしてproc限定でrefineしたい
 
 ```ruby
-refining do
-  using Ext
+refining(Ext) do
   "joker1007".hello # => "Hello joker1007"
 end
 ```
@@ -22,9 +21,11 @@ end
 ---
 
 ![syosa2.jpg](syosa2.jpg)
-# ならばevalだ
+# よろしい ならばevalだ
 
 ---
+
+# ただ単純にevalするだけだと
 
 ```ruby
 module Kernel
@@ -47,6 +48,7 @@ end
 
 ---
 
+## parser, unparserを使ってprocからsourceを取るproc_to_astというgemを昔作った
 ```ruby
 require 'proc_to_ast'
 
@@ -66,6 +68,8 @@ require 'proc_to_ast'
 
 ---
 
+# これでいける？
+
 ```ruby
 refining(Ext) do
   "joker1007".hello
@@ -80,6 +84,8 @@ end
 
 ---
 
+# 実は駄目
+
 ```ruby
 refining(Ext) do
   "joker1007".hello
@@ -88,7 +94,7 @@ end
 module Dummy; end
 
 refining(Dummy) do
-  "tagomoris".hello # => 呼べるやん！
+  "tagomoris".hello # => 呼べてしまう！
 end
 ```
 
@@ -141,6 +147,8 @@ end
  
 ---
 
+# 評価コンテキストの壁
+
 ```ruby
 class Foo
   def initialize
@@ -159,8 +167,10 @@ Foo.new.hello # => dead
 
 ---
 
-# procは処理だけじゃない
-# objectを渡そう
+# まずは落ち着け
+![otituke.jpg](otituke.jpg)
+# 落ち着いてobjectを渡せばいい
+# instance_execだ
 
 ---
 
@@ -174,13 +184,13 @@ Foo.new.hello # => dead
       Class.new do
         using #{mod.to_s}
 
-        def self.process(obj)
+        def self.process(obj) # => 引数を増やす
           pr = #{proc_source}
-          obj.instance_exec(&pr)
+          obj.instance_exec(&pr) # => コンテキストゲット
         end
       end
     RUBY
-    c.process(obj)
+    c.process(obj) # => 引数で渡す
   end
 ```
 
@@ -204,10 +214,12 @@ Foo.new.hello # => Yay
 
 ---
 
-# 余裕やん！
+# いけるやん！
 ![sonnafuuni.jpg](sonnafuuni.jpg)
 
 ---
+
+# ローカル変数がッ！ procはクロージャ！
 
 ```ruby
 class Foo
@@ -223,8 +235,9 @@ Foo.new.hello("joker1007") # => Dead again!!
 
 ---
 
-# ローカル変数がッ！
+
 # Binding「俺様の出番の様だな」
+![amanuma.jpg](amanuma.jpg)
 
 ---
 
@@ -241,7 +254,7 @@ Foo.new.hello("joker1007") # => Dead again!!
         def self.process(b)
           #{b.local_variables.map do |v|
              "#{v} = b.local_variable_get(:#{v})"
-           end.join("\n")}
+           end.join("\n")} # => ローカル変数をevalでコピー
           pr = #{proc_source}
           b.receiver.instance_exec(&pr)
         end
@@ -257,6 +270,8 @@ Foo.new.hello("joker1007") # => Dead again!!
 ![dai3bu_kan](dai3bu_kan.jpg)
 
 ---
+
+# ブロック内で使わないローカル変数……
 
 ```ruby
 class Foo
@@ -278,11 +293,12 @@ Foo.new.hello_koic # => unused local variable `process`
 
 ---
 
-# あー！使ってないローカル変数……
-# 落ち着け、そもそもASTがある
-![mada_awateru.jpg](mada_awateru.jpg)
+# あーもう、めちゃくちゃだよ！
+# もういいや、AST使おう
 
 ---
+
+## parser gemの出力を読んでブロック内のローカル変数読み出しっぽい所を全部リストアップする
 
 ```ruby
   def get_local_variable_names(ast, buf = [])
@@ -317,6 +333,7 @@ Foo.new.hello_koic # => unused local variable `process`
         using #{mod.to_s}
 
         def self.process(b)
+          # 使っている可能性のあるローカル変数だけをコピる
           #{b.local_variables
           .select { |v| used_local_variables.include?(v) }
           .map { |v| "#{v} = b.local_variable_get(:#{v})" }.join("\n")}
@@ -331,12 +348,14 @@ Foo.new.hello_koic # => unused local variable `process`
 
 ---
 
-# binding渡すのダサくね？
+# なんかbinding渡すのダサくね？
 # 「ドーモ、バインディング・ニンジャです」
 ![aisatsu.jpg](aisatsu.jpg)
 # アイエエエエ！ニンジャ？！
 
 ---
+
+# binding_ninjaでbinding渡しを隠蔽する
 
 ```ruby
   extend BindingNinja
@@ -348,6 +367,8 @@ Foo.new.hello_koic # => unused local variable `process`
 ```
 
 ---
+
+# 最終系
 
 ```ruby
 class Context
@@ -381,7 +402,7 @@ Context.new.hello("hoge")
 
 # 実はprocのソース化がめっちゃ危うい…
 # procの開始と終端取れるAPI
-# マジ欲しいです！
+# 欲しいです！
 
 ---
 
@@ -404,7 +425,7 @@ Comparison:
 
 ---
 
-# ローカル変数さえ諦めれば……。
+# ローカル変数さえ諦めれば10倍でFA
 
 ```
 Warming up --------------------------------------
@@ -418,3 +439,5 @@ Comparison:
     plain:  1941491.1 i/s
  refining:   189518.0 i/s - 10.24x  slower
 ```
+
+procって大変ですね
