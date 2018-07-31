@@ -4,7 +4,6 @@
 
 ---
 
-![syosa.jpg](syosa.jpg)
 # 私はRefinementsが好きだ
 
 ---
@@ -20,7 +19,6 @@ end
 
 ---
 
-![syosa2.jpg](syosa2.jpg)
 # よろしい ならばevalだ
 
 ---
@@ -102,7 +100,6 @@ end
 
 # TOPLEVEL_BINDINGは常に同じbinding
 # 一回evalでusingしたら効果が残る
-![mada_awateru.jpg](mada_awateru.jpg)
 # 大丈夫！Class.newがある！
 
 ---
@@ -168,7 +165,6 @@ Foo.new.hello # => dead
 ---
 
 # まずは落ち着け
-![otituke.jpg](otituke.jpg)
 # 落ち着いてobjectを渡せばいい
 # instance_execだ
 
@@ -215,7 +211,6 @@ Foo.new.hello # => Yay
 ---
 
 # いけるやん！
-![sonnafuuni.jpg](sonnafuuni.jpg)
 
 ---
 
@@ -237,7 +232,6 @@ Foo.new.hello("joker1007") # => Dead again!!
 
 
 # Binding「俺様の出番の様だな」
-![amanuma.jpg](amanuma.jpg)
 
 ---
 
@@ -267,7 +261,6 @@ Foo.new.hello("joker1007") # => Dead again!!
 ---
 
 # 勝ったッ！
-![dai3bu_kan](dai3bu_kan.jpg)
 
 ---
 
@@ -350,7 +343,6 @@ Foo.new.hello_koic # => unused local variable `process`
 
 # なんかbinding渡すのダサくね？
 # 「ドーモ、バインディング・ニンジャです」
-![aisatsu.jpg](aisatsu.jpg)
 # アイエエエエ！ニンジャ？！
 
 ---
@@ -396,7 +388,6 @@ Context.new.hello("hoge")
 ---
 
 # 圧倒的じゃないか！
-![beam.jpg](beam.jpg)
 
 ---
 
