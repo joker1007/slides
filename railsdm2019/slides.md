@@ -112,6 +112,15 @@ MySQLでリクエスト時に集計して結果をRedisにキャッシュ。
 
 ---
 
+# Rukawaの開発
+
+- Bigquery採用に伴いバッチの数が激増
+  - 依存関係や並列実行可能かどうかを上手く調整する必要が出てきた
+- ワークフローエンジン[rukawa](http://github.com/joker1007/rukawa)を開発
+  - 以前の発表資料
+
+---
+
 # ユーザーセグメンテーションの裏側
 
 - 各条件をツリーとして表現し、Operatorノードで繋ぐ
@@ -124,6 +133,7 @@ MySQLでリクエスト時に集計して結果をRedisにキャッシュ。
 ---
 
 # セグメンテーションツリーのイメージ
+![segmentation_tree.png](segmentation_tree.png)
 
 ---
 

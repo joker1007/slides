@@ -1,0 +1,17 @@
+digraph segmentation_tree {
+  AND;
+  AND_NOT;
+  OR;
+
+  profile1 [label = "profile[age] >= 20", shape = box];
+  profile2 [label = "profile[prefecture] = Tokyo", shape = box];
+  profile3 [label = "profile[gender] = male", shape = box];
+  event1 [label = "event[purchase] count >= 1 in 3 days", shape = box];
+
+  OR -> profile1;
+  OR -> profile2;
+  AND -> OR;
+  AND -> profile3;
+  AND_NOT -> AND;
+  AND_NOT -> event1;
+}
