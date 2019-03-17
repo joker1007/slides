@@ -1,7 +1,3 @@
-- 分散システムとRailsの組み合わせ
-- スケールするデータパイプラインの作り方
-- ユーザセグメンテーションを支える技術
-
 # Architecture Evolution in Repro
 
 ### @joker1007 (Repro inc. CTO)
