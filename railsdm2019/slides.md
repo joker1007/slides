@@ -27,13 +27,13 @@
 
 # Retention Analytics
 
-![retention.jpg](retention.jpg)
+![retention_resize.png](retention_resize.png)
 
 ---
 
 # Funnel Analytics
 
-![funnel.jpg](funnel.jpg)
+![funnel_resize.png](funnel_resize.png)
 
 ---
 
