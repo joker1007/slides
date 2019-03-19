@@ -80,6 +80,7 @@ MySQLでリクエスト時に集計して結果をRedisにキャッシュ。
 # ナイーブなバッチの問題点
 顧客が増えれば線形で実行時間が伸び即破綻する。
 顧客が増えてもスケールでき、かつ顧客毎に集計更新に差が生じない様にする必要がある。
+安易にバッチ化するとこうなりがち。
 
 ---
 
@@ -91,11 +92,21 @@ MySQLでリクエスト時に集計して結果をRedisにキャッシュ。
 
 ---
 
+# Bigqueryの採用理由
+
+- スキーマ設計を頑張りたくない
+  - 分散キーとかソートキーとか
+- 異常なコストパフォーマンス
+- まともなSQLに対応
+
+---
+
 # fluentd運用時の注意点
 
 - データ転送量が多い時の注意点
   - ブロッキングで詰まらない様にflushスレッド数を調整する
   - 十分なファイルストレージを用意する
+  - 特にBigqueryはAPIが良く死ぬ :disappointed_relieved:
 - `require_ack_response`とsecondary outputは基本的に必須
   - でないとデータロストする
   - secondaryでエラーファイルをS3に書き出すのは割と大丈夫
@@ -117,21 +128,22 @@ MySQLでリクエスト時に集計して結果をRedisにキャッシュ。
 
 ただ、SQL構築するのに、かなりの時間を費した。
 特にFunnel Analyticsは超辛かった。
+(ハードな集計SQLに興味がある人は後で直接質問を)
 
 ---
 
 # Bigqueryでは辛いこと
 
 - ユーザーが任意のタイミングで任意の条件でセグメンテーションし、短時間で結果を返すのが厳しい
-  - Bigqueryはクエリ課金
+  - 即時クエリの同時実行上限が存在する
+  - クラウドとリージョンを跨ぐデータ転送
+- Bigqueryはクエリ課金
   - 利用されればされる程、Repro側が損することになる
   - 当時は顧客毎にクエリ対象を分けられなかった
     - 現在はclustering keyで多少カバーできそう
-  - 即時クエリの同時実行上限が存在する
-  - クラウドを跨ぐデータ転送
 
 しばらくは持つが、顧客の数が増えてくると破綻する。
-(また同じ問題が……。)
+(また同じ問題……。)
 
 ---
 
@@ -141,8 +153,8 @@ MySQLでリクエスト時に集計して結果をRedisにキャッシュ。
   - 依存関係や並列実行可能かどうかを上手く調整する必要が出てきた
 - ワークフローエンジン[rukawa](http://github.com/joker1007/rukawa)を開発
   - 以前の発表資料
-  - [Ruby製のシンプルなワークフローエンジンRukawaの紹介](https://qiita.com/joker1007/items/02b334d1cca76fadaf2c)
-  - [ワークフローエンジンRukawaと実装のサボり方](http://joker1007.github.io/slides/rukawa_implmentation/slides/index.html#/)
+    - [Ruby製のシンプルなワークフローエンジンRukawaの紹介](https://qiita.com/joker1007/items/02b334d1cca76fadaf2c)
+    - [ワークフローエンジンRukawaと実装のサボり方](http://joker1007.github.io/slides/rukawa_implmentation/slides/index.html#/)
 
 ---
 
@@ -171,6 +183,7 @@ MySQLでリクエスト時に集計して結果をRedisにキャッシュ。
 - [Dockerコンテナ上でのassets precompileの扱い 2017](https://qiita.com/joker1007/items/79e719ca5a0fca6c1457)
 - [RailsアプリをECSで本番運用するためのStep by Step](http://joker1007.github.io/slides/rails_on_ecs/slides/index.html#/)
 - [Docker時代の分散RSpec環境の作り方](https://speakerdeck.com/joker1007/dockershi-dai-falsefen-san-rspechuan-jing-falsezuo-rifang)
+- 記事には書いてないがEmbulk on Fargateとかも
 
 ---
 
@@ -276,6 +289,17 @@ Presto自体はデータストアを持っていない。
 # 妄想上の構造
 
 ![arch_future.png](arch_future.png)
+
+---
+
+# その他の課題
+
+- マイクロサービス化
+- サービスディスカバリ
+- スキーマ管理
+- 秘匿情報管理V2
+
+色々とやらねばならないことが。
 
 ---
 
