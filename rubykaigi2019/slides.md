@@ -8,6 +8,7 @@
 - Repro inc. CTO
 - I familiar with ...
   - Ruby/Rails
+  - TracePoint
   - Bigquery
   - fluentd
   - Hive/Presto/Cassandra
@@ -392,13 +393,15 @@ end
 
 # It is difficult to resolve nested do-end
 
-# OK, I use AST Transformation!!
+# OK, AST Transformation!!
+
+# I used RubyVM::AbstractSyntaxTree.
+# It is new feature of Ruby-2.6
+# and very useful for handling AST.
 
 ---
 
-# Use RubyVM::AbstractSyntaxTree
-
-It is very useful for handling AST.
+# Breakdown of implementation
 
 - Extract AST from given block by `RubyVM::AST.of`
 - Detect a pattern like `a <<= foo`
@@ -409,4 +412,230 @@ It is very useful for handling AST.
 
 ---
 
+# Detect a pattern
 
+```ruby
+def __is_bind_statement?(node)
+  (node.type == :DASGN || node.type == :DASGN_CURR) &&
+    node.children[1].type == :CALL &&
+    node.children[1].children[1] == :<<
+end
+```
+
+---
+
+# Extract fragments of source code
+
+```ruby
+# @param source [Array<String>] lines of source code
+def extract_source(source, first_lineno, first_column, last_lineno, last_column)
+  lines = source[(first_lineno - 1)..(last_lineno-1)]
+  first_line = lines.shift
+  last_line = lines.pop
+
+  if last_line.nil?
+    first_line[first_column..last_column]
+  else
+    first_line[first_column..-1] + lines.join + last_line[0..last_column]
+  end
+end
+```
+
+---
+
+# Reconstruct source code
+
+```ruby
+def __transform_node(source, buf, node, last_stmt: false)
+  if __is_bind_statement?(node)
+    lvar = node.children[0]
+    rhv = node.children[1].children[2]
+    origin = Monad.extract_source(source, rhv.first_lineno, rhv.first_column, rhv.last_lineno, rhv.last_column).chomp
+    buf[0].concat(
+      "(#{origin}).tap { |val| raise('type_mismatch') unless val.is_a?(monad_class) }.flat_map do |#{lvar}|\n#{"pure(#{lvar})\n" if last_stmt}"
+    )
+    buf[1] += 1
+  else
+    buf[0].concat("(#{Monad.extract_source(source, node.first_lineno, node.first_column, node.last_lineno, node.last_column).chomp})\n")
+  end
+end
+```
+
+---
+
+# Wrap into new proc
+
+```ruby
+gen = "proc { |#{caller_local_variables.map(&:to_s).join(",")}|  begin; " + buf[0] + "rescue => ex; rescue_in_monad(ex); end; }\n"
+pr = instance_eval(gen, caller_location.path, caller_location.lineno)
+Monad.proc_cache["#{block_location[0]}:#{block_location[1]}"] = pr
+```
+
+`instance_eval` outputs a proc object which contains transformed process.
+And I cached it in order to avoid source code transformation repeatedly.
+
+---
+
+# Handling local variables
+
+Reconstructing source code lose local variables,
+because environment contained by block is lost.
+
+Binding is required to handle local variables.
+
+---
+
+# That is when TracePoint is effective!
+
+# I found a technique to get Binding of given block
+
+---
+
+```ruby
+proc_binding = nil
+trace = TracePoint.new(:line) do |tp|
+  # this block is called Just before evaluating proc's first line
+  proc_binding = tp.binding
+  throw :escape
+end
+
+catch(:escape) do
+  # In Ruby-2.6, TracePoint limits tracking target.
+  trace.enable(target: block)
+  block.call
+ensure
+  trace.disable
+end
+```
+---
+
+# I got Binding of proc!!
+# Binding has everything for black magic.
+
+---
+
+```ruby
+ast = RubyVM::AbstractSyntaxTree.of(block); # SCOPE
+args_tbl = ast.children[0]
+args_node = ast.children[1]
+caller_local_variables = proc_binding.local_variables - args_tbl
+```
+
+```ruby
+gen = "proc { |#{caller_local_variables.map(&:to_s).join(",")}| ...."
+```
+
+I got local_variables and copy into generated proc.
+
+---
+
+At last, instance_exec generated proc with local variables of caller.
+
+```ruby
+instance_exec(
+  *(caller_local_variables.map { |lvar| proc_binding.local_variable_get(lvar) }),
+  &generated_pr
+)
+```
+
+---
+
+# Show powers of monad syntax by some examples.
+
+---
+
+# Maybe (Just)
+
+```ruby
+class Just
+  include Monad
+  include Monar::Maybe
+  def initialize(value)
+    @value = value; end
+
+  def flat_map(&pr)
+    pr.call(@value); end
+
+  def monad_class
+    Monar::Maybe; end
+end
+```
+
+---
+
+# Maybe (Nothing)
+
+```ruby
+class Nothing
+  include Monad
+  include Monar::Maybe
+  def initialize(*value); end
+
+  def flat_map(&pr)
+    self; end
+
+  def monad_class
+    Monar::Maybe; end
+end
+```
+
+---
+
+# Maybe example
+
+```ruby
+key1 = "users/#{user.id}/posts/#{post.id}"
+key2 = "posts/#{post.id}/comments"
+lookup_cache(key1).monadic_eval do |cached_post|
+  cached_comments <<= lookup_cache(key2)
+  # If lookup_cache(key2) failes,
+  # below processes are not executed
+  post = Oj.load(cached_post)
+  comments = Oj.load(cached_comments)
+  post.comments = comments
+  pure post
+end
+```
+
+---
+
+# Either (Right)
+
+Ritht is the same as Just.
+
+---
+
+# Either (Left)
+
+Left is the same as Nothing.
+But Left has a exception.
+
+---
+
+# Either (helper function)
+
+```ruby
+def either(&pr)
+  Monar::Either.right(pr.call)
+rescue => ex
+  Monar::Either.left.new(ex)
+end
+```
+
+---
+
+# Either example
+
+```ruby
+either { Balance.find_by!(user: user_a) }.monadic_eval do |balance_a|
+  balance_a.ensure_amount!(color
+end
+```
+
+---
+
+# Future
+
+---
+
+# ParserCombinator
