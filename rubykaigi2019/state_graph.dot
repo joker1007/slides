@@ -1,0 +1,41 @@
+digraph segmentation_tree {
+  graph [newrank = true];
+  rankdir="LR";
+
+  subgraph cluster_0 {
+    label = "processes";
+    color = blue;
+
+    ProcessA [shape = box];
+    ProcessB [shape = box];
+    ProcessC [shape = box];
+    get [shape = box, style = "filled", fillcolor = lightpink];
+    put_validated [shape = box, label = "put :validated", style = "filled", fillcolor = lightpink];
+    put_saved [shape = box, label = "put :saved", style = "filled", fillcolor = lightpink];
+
+    get -> ProcessA -> put_validated -> ProcessB -> put_saved -> ProcessC;
+  }
+
+  subgraph cluster_1 {
+    label = "state transitions (monad pipeline)";
+    color = red;
+
+    not_saved -> validated -> saved;
+  }
+
+  initial [label = ":not_saved (initial)"];
+
+  initial -> not_saved;
+  not_saved -> get;
+  put_validated -> validated;
+  put_saved -> saved;
+
+  { rank=same; get not_saved }
+  { rank=same; put_validated validated }
+  { rank=same; put_saved saved }
+
+  output [label = "output\n[value, state]"];
+
+  ProcessC -> output;
+  saved -> output;
+}

@@ -8,17 +8,17 @@
 - Repro inc. CTO
 - I familiar with ...
   - Ruby/Rails
-  - TracePoint
+  - Ruby Black Magic (TracePoint)
   - Bigquery
   - fluentd
   - Hive/Presto/Cassandra
-  - Data enginieering
 
 ---
 
 # Asakusa.rb
 
 I am a member of amazing Ruby community.
+![asakusarb.png](asakusarb.png)
 
 ---
 
@@ -307,7 +307,7 @@ and syntax sugar is very effective to use easier.
 
 ---
 
-# Nested `flat_map` is not readable
+# Nested `flatMap` is not readable
 
 ```scala
 Some(10).flatMap { x =>
@@ -318,6 +318,10 @@ Some(10).flatMap { x =>
   }
 }
 ```
+
+frequent appearance of `flatMap` is very noisy.
+`{`, `}` is the same.
+indent++.
 
 ---
 
@@ -542,6 +546,12 @@ instance_exec(
 
 # Show powers of monad syntax by some examples.
 
+- Maybe
+- Either
+- Future
+- State
+- ParserCombinator
+
 ---
 
 # Maybe (Just)
@@ -586,15 +596,16 @@ end
 ```ruby
 key1 = "users/#{user.id}/posts/#{post.id}"
 key2 = "posts/#{post.id}/comments"
+# lookup_cache returns Maybe
 lookup_cache(key1).monadic_eval do |cached_post|
   cached_comments <<= lookup_cache(key2)
-  # If lookup_cache(key2) failes,
+  # If lookup_cache(key2) fails,
   # below processes are not executed
   post = Oj.load(cached_post)
   comments = Oj.load(cached_comments)
   post.comments = comments
   pure post
-end
+end # return Just(post) or Nothing
 ```
 
 ---
@@ -628,14 +639,120 @@ end
 
 ```ruby
 either { Balance.find_by!(user: user_a) }.monadic_eval do |balance_a|
-  balance_a.ensure_amount!(color
+  _ <<= balance_a.ensure_amount!(amount) # return Either
+  balance_b <<= either { Balance.find_by!(user: user_b) }
+  TransferMoneyService.new(from: user_a, to: user_b, amount: amount)
+    .process # return Either
+end # return Right(result) or Left(exception)
+```
+
+---
+
+# Future (extend concurrent-ruby)
+
+```ruby
+Concurrent::Promises::Future.include(Monad)
+class Concurrent::Promises::Future
+  def flat_map(&pr)
+    yield value!
+  rescue => ex
+    if rejected?
+      self
+    else
+      Concurrent::Promises.rejected_future(ex)
+    end
+  end
 end
 ```
 
 ---
 
-# Future
+# Future example
+
+```ruby
+Concurrent::Promises.make_future(5).monadic_eval do |x|
+  a = x.odd? ? x : x / 2
+  b = Concurrent::Promises.future { sleep 2; 11 }
+  c = Concurrent::Promises.future { sleep 1; 3 }
+  d <<= b # wait b
+  e <<= c # wait c
+  pure(a + d + e)
+end # Return Future(19)
+```
 
 ---
+
+# State (constructor)
+
+State has a proc that receives current state and outputs value and next state.
+
+```ruby
+class State
+  include Monad
+  # @param next_state [Proc (s -> [a, s])]
+  def initialize(next_state)
+    raise ArgumentError.new("need to respond to :call") unless next_state.respond_to?(:call)
+    @next_state = next_state
+  end
+end
+```
+
+---
+
+# State (flat_map)
+
+```ruby
+def flat_map(&pr0)
+  self.class.new(
+    proc do |s0|
+      x, s1 = run_state(s0)
+      pr1 = pr0.call(x)
+      pr1.next_state.call(s1)
+    end
+  )
+end
+```
+
+run_state(s1) -> [a, s2] -> block.call(a) ->
+new state monad -> run_state(s2)
+
+Wrap these processes by new State class.
+
+---
+
+# State (helper function)
+
+```ruby
+def get
+  State.new(proc { |s| [s, s] })
+end
+
+def put(st)
+  State.new(proc { |_| [nil, st] })
+end
+```
+
+---
+
+# State example
+
+```ruby
+state = State.pure(5).monadic_eval do |n|
+  status <<= get # Return initial state
+  _ <<= if status != :saved
+          result = n * 10
+          put(:saved) # Update state
+        else
+          pure(nil)
+        end
+  pure(result)
+end
+
+val, st = state.run_state(:not_saved)
+# val == 50, st == :saved
+
+val, st = state.run_state(:saved)
+# val == nil, st == :saved
+```
 
 # ParserCombinator
