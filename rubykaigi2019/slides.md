@@ -1,4 +1,20 @@
+---
+class: invert
+style: |
+  section.larger h1 {
+    font-size: 120px;
+  }
+  h1 {
+    font-size: 56px;
+  }
+  section {
+    font-size: 34px;
+  }
+---
+
 # Pragmatic Monadic Programming in Ruby
+## @joker1007 (Repro inc.)
+### RubyKaigi 2019
 
 ---
 
@@ -15,10 +31,15 @@
 
 ---
 
-# Asakusa.rb
+![Repro](repro_logo.png)
+We provide a service as ...
+- Analytics of Mobile Apps, Web Apps.
+- Marketing Automation.
 
+---
+
+![height:600px](asakusarb.png)
 I am a member of amazing Ruby community.
-![asakusarb.png](asakusarb.png)
 
 ---
 
@@ -32,9 +53,41 @@ I am a member of amazing Ruby community.
 
 # RubyVM::AST.of can receive a Proc
 
+```ruby
+pr = proc { puts :foo }
+ast = RubyVM::AbstractSyntaxTree.of(pr)
+pp ast
+```
+
+```
+(SCOPE@1:10-1:23
+ tbl: []
+ args: nil
+ body: (FCALL@1:12-1:21 :puts (ARRAY@1:17-1:21 (LIT@1:17-1:21 :foo) nil)))
+```
+
 ---
 
 # TracePoing#enable can receive a Proc
+
+```ruby
+pr = proc do
+  puts :foo
+  puts :bar
+end
+trace = TracePoint.new(:line) do |tp|
+  p tp.lineno
+end
+trace.enable(target: pr)
+pr.call
+```
+
+```
+2
+foo
+3
+bar
+```
 
 ---
 
@@ -44,6 +97,15 @@ I am a member of amazing Ruby community.
 
 # "Proc" is object of Procedure
 # In other words, Function object.
+
+```ruby
+pr = proc { puts :hello_proc }
+p pr
+```
+
+```
+#<Proc:0x00000000025fad50@/home/joker/slides/rubykaigi2019/proc.rb:1>
+```
 
 ---
 
@@ -61,7 +123,7 @@ counter.call # => 1
 counter.call # => 2
 ```
 
-Proc keep enviornment of the scope where it is created.
+Proc keep the enviornment of the scope where it is created.
 
 ---
 
@@ -93,23 +155,29 @@ In other words, Ruby has a factor of functional programming.
 
 # Monad
 
-```
-In functional programming, a monad is a design pattern[1] that allows structuring programs generically while automating away boilerplate code needed by the program logic. Monads achieve this by providing their own data type, which represents a specific form of computation, along with one procedure to wrap values of any basic type within the monad (yielding a monadic value) and another to compose functions that output monadic values (called monadic functions).
-```
+> In functional programming, a monad is a design pattern[1] that allows structuring programs generically while automating away boilerplate code needed by the program logic.
+Monads achieve this by providing their own data type, which represents a specific form of computation, along with one procedure to wrap values of any basic type within the monad (yielding a monadic value) and another to compose functions that output monadic values (called monadic functions).
 
 from Wikipedia https://en.wikipedia.org/wiki/Monad_(functional_programming).
 
 ---
 
-# :thinking_face: :question:
-# It seems difficult.
+<!-- class: larger invert -->
+
+# 🤔 :question:
+# It seems difficult!!
 
 ---
 
+<!-- class: invert -->
+
 # But, Monad is very simple and useful pattern actually.
 # And syntax sugar is very important for monad.
+
+---
+
 # I think that Ruby may be able to implement Monad syntax sugar by black magics.
-# If I can implement, I realize very useful and very general abstraction in Ruby.
+# If I can implement, I realize very useful and general abstraction in Ruby.
 
 ---
 
@@ -132,8 +200,10 @@ I will talk about only programming technique.
 
 # Functor
 
-Functor is a container having a context for specific purpose.
-Functor is a object that can be mapped by any function.
+Functor ...
+- is a container having a context for specific purpose.
+- is a object that can be mapped by any function.
+
 
 Most popular functor in Ruby is "Array".
 
@@ -204,7 +274,10 @@ array_plus.ap([2, 3], []) # => []
 
 ```ruby
 def ap(*targets)
-  curried = ->(*extracted) { fmap { |pr| pr.call(*extracted) } }.curry(targets.size)
+  curried = ->(*extracted) do
+    fmap { |pr| pr.call(*extracted) }
+  end.curry(targets.size)
+
   applied = targets.inject(pure(curried)) do |pured, t|
     pured.flat_map do |pr|
       t.fmap { |v| pr.call(v) }
@@ -214,12 +287,9 @@ def ap(*targets)
 end
 ```
 
-Maybe you think "Hey, you use `flat_map`!!".
-Sorry, it is the reason why I want to implement easily.
-
 ---
 
-#  Applicative Functor requires some laws
+#  Applicative also requires some laws
 
 But laws of Applicative Functor are more complicated than one of Functor.
 
@@ -231,7 +301,7 @@ Sorry, I omit explaining details.
 
 Applicative Functor can not express multiple dependent effects.
 
-For example, a calculations that may fail depends on whether past calculations succeeded or failed.
+For example, a calculations that may fail depends on whether previous calculations succeeded or failed.
 
 In such cases, Monad is useful.
 
@@ -282,6 +352,7 @@ for {
   x <- Some(10)
   y <- functionMaybeFailed()
 } yield x + y
+// Return Some(10 + y) or None
 ```
 
 Scala transforms this codes to `flat_map` style internally.
@@ -303,7 +374,7 @@ Some functional languages have syntax sugar for monad.
 Haskell has do-syntax, Scala has for-syntax.
 
 Because the main purpose of monad is a chain of contextual computation,
-and syntax sugar is very effective to use easier.
+and syntax sugar is very effective to use it more easily.
 
 ---
 
@@ -357,7 +428,7 @@ There is no warning.
 
 It's all.
 
-Important discovery is `<<=`!!
+ `<<=` is important discovery!!
 
 ---
 
@@ -374,7 +445,7 @@ I can change the behavior freely!!
 
 ---
 
-# Review transformation
+# Review code transformation
 
 ```ruby
 [1,2,3].monadic_eval do |i|
@@ -395,13 +466,12 @@ end
 
 ---
 
-# It is difficult to resolve nested do-end
+# It is difficult to resolve nested do-end by method chain
 
 # OK, AST Transformation!!
+# We already have `RubyVM::AST.of`
 
-# I used RubyVM::AbstractSyntaxTree.
-# It is new feature of Ruby-2.6
-# and very useful for handling AST.
+# It is new feature of Ruby-2.6 and very useful for handling AST.
 
 ---
 
@@ -454,13 +524,24 @@ def __transform_node(source, buf, node, last_stmt: false)
   if __is_bind_statement?(node)
     lvar = node.children[0]
     rhv = node.children[1].children[2]
-    origin = Monad.extract_source(source, rhv.first_lineno, rhv.first_column, rhv.last_lineno, rhv.last_column).chomp
+    origin = Monad.extract_source(
+      source,
+      rhv.first_lineno,
+      rhv.first_column,
+      rhv.last_lineno,
+      rhv.last_column).chomp
     buf[0].concat(
-      "(#{origin}).tap { |val| raise('type_mismatch') unless val.is_a?(monad_class) }.flat_map do |#{lvar}|\n#{"pure(#{lvar})\n" if last_stmt}"
+      "(#{origin}).flat_map do |#{lvar}|\n#{"pure(#{lvar})\n" if last_stmt}"
     )
     buf[1] += 1
   else
-    buf[0].concat("(#{Monad.extract_source(source, node.first_lineno, node.first_column, node.last_lineno, node.last_column).chomp})\n")
+    buf[0].concat("(#{Monad.extract_source(
+      source,
+      node.first_lineno,
+      node.first_column,
+      node.last_lineno,
+      node.last_column
+    ).chomp})\n")
   end
 end
 ```
@@ -470,7 +551,9 @@ end
 # Wrap into new proc
 
 ```ruby
-gen = "proc { |#{caller_local_variables.map(&:to_s).join(",")}|  begin; " + buf[0] + "rescue => ex; rescue_in_monad(ex); end; }\n"
+gen = "proc { |#{caller_local_variables.map(&:to_s).join(",")}|
+  begin; " + buf[0] + "rescue => ex; rescue_in_monad(ex); end;
+}\n"
 pr = instance_eval(gen, caller_location.path, caller_location.lineno)
 Monad.proc_cache["#{block_location[0]}:#{block_location[1]}"] = pr
 ```
@@ -612,14 +695,14 @@ end # return Just(post) or Nothing
 
 # Either (Right)
 
-Ritht is the same as Just.
+`Ritht` is the same as `Just`.
 
 ---
 
 # Either (Left)
 
-Left is the same as Nothing.
-But Left has a exception.
+`Left` is the same as `Nothing`.
+But `Left` has a exception.
 
 ---
 
@@ -639,8 +722,9 @@ end
 
 ```ruby
 either { Balance.find_by!(user: user_a) }.monadic_eval do |balance_a|
-  _ <<= balance_a.ensure_amount!(amount) # return Either
+  _         <<= balance_a.ensure_amount!(amount) # return Either
   balance_b <<= either { Balance.find_by!(user: user_b) }
+
   TransferMoneyService.new(from: user_a, to: user_b, amount: amount)
     .process # return Either
 end # return Right(result) or Left(exception)
@@ -706,15 +790,15 @@ def flat_map(&pr0)
   self.class.new(
     proc do |s0|
       x, s1 = run_state(s0)
-      pr1 = pr0.call(x)
-      pr1.next_state.call(s1)
+      new_state_monad = pr0.call(x)
+      new_state_monad.next_state.call(s1)
     end
   )
 end
 ```
 
-run_state(s1) -> [a, s2] -> block.call(a) ->
-new state monad -> run_state(s2)
+run_state(s0) -> [a, s2] -> block.call(a) ->
+new state monad -> run_state(s1)
 
 Wrap these processes by new State class.
 
@@ -754,5 +838,15 @@ val, st = state.run_state(:not_saved)
 val, st = state.run_state(:saved)
 # val == nil, st == :saved
 ```
+
+---
+
+# Mental model of State
+
+State handles 2 pipelines.
+
+![state_graph.png](state_graph.png)
+
+---
 
 # ParserCombinator
