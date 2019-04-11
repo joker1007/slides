@@ -850,3 +850,141 @@ State handles 2 pipelines.
 ---
 
 # ParserCombinator
+
+Parser also contains a proc.
+that proc receives `String` and returns `[Object, String]`.
+`Object` is result of parsing. `String` is remained characters.
+
+`flat_map` expresses parser combination.
+`|` expresses selective parser.
+
+---
+
+# `Parser#flat_map`
+
+```ruby
+def flat_map(&pr)
+  self.class.new(
+    proc do |str0|
+      result0 = run_parser(str0)
+      result0.flat_map do |consumed, remained|
+        next_parser = pr.call(consumed)
+        next_parser.run_parser(remained)
+      end
+    end
+  )
+end
+```
+
+Wrapping processes (belows) by `Proc`.
+
+Get result -> given proc processes result ->
+Get New Parser -> parse remained chars.
+
+
+---
+
+# `Parser#|`
+
+```ruby
+def |(other)
+  self.class.new(
+    proc do |str|
+      result0 = run_parser(str)
+      result1 = other.run_parser(str)
+      result0.empty? ? result1 : result0
+    end
+  )
+end
+```
+
+---
+
+# Parser examples 1
+
+```ruby
+def anychar
+  new(
+    proc do |string|
+      string == "" ? [] : [[string[0], string[1..-1]]]
+    end
+  )
+end
+```
+
+```ruby
+# @param cond [Proc (Char -> TrueClass | FalseClass)]
+def satisfy(cond)
+  anychar.flat_map do |char|
+    if cond.call(char)
+      new(proc { |string| [[char, string]] })
+    else
+      new(proc { |string| [] })
+    end
+  end
+end
+```
+
+---
+
+# Parser examples 2
+
+```ruby
+def string(str)
+  return pure "" if str == ""
+
+  c, tail = str[0], str[1..-1]
+  char(c).monadic_eval do |c1|
+    cs <<= self.class.string(tail)
+    pure [c1, *cs].join
+  end
+end
+```
+
+---
+
+# Parser examples 3
+
+```ruby
+def one_of(chars)
+  satisfy(->(char) { chars.include?(char) })
+end
+
+def many(parser, level = 1)
+  combined = parser | pure(nil)
+
+  combined.monadic_eval do |result|
+    result2 <<=
+      if result.nil?
+        pure(nil)
+      else
+        self.class.many(parser, level + 1)
+      end
+
+    pure([result, result2].compact.flatten(level))
+  end
+end
+```
+
+---
+
+# DEMO (Arithmetic Parser)
+
+---
+
+# Conclusion
+
+- Monad is not difficult, It's `flat_map`
+- The abstraction of monad is very powerful
+- Syntax is very important
+
+By this implementation, I recognized the fun of monadic programming again.
+
+---
+
+# At last, I never recommend using this gem on production!!
+
+If you are interested in TracePoint and AST,
+Examples of the gem's code is helpful for you, maybe.
+
+And, let's enjoy darkness programming!!
