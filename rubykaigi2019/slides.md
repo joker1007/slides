@@ -176,7 +176,7 @@ from Wikipedia https://en.wikipedia.org/wiki/Monad_(functional_programming).
 
 ---
 
-# I think that Ruby may be able to implement Monad syntax sugar by black magics.
+# I think that I may be able to implement Monad syntax sugar by Ruby black magics.
 # If I can implement, I realize very useful and general abstraction in Ruby.
 
 ---
@@ -192,6 +192,7 @@ from Wikipedia https://en.wikipedia.org/wiki/Monad_(functional_programming).
 - Monad in Ruby
 - Syntax sugar for monad
 - Implement monadic syntax in Ruby
+- Examples, DEMO
 
 Today, I will not explain mathmatics.
 I will talk about only programming technique.
@@ -250,7 +251,7 @@ end
 ```
 
 This sample outputs nested array.
-Of course, we can use `flat_map`.
+Of course, we can use `flatten`, `flat_map`.
 But we have more functional approach.
 
 ---
@@ -368,6 +369,10 @@ Some(10).flatMap { x =>
 
 ---
 
+# Monad is `flat_map`!
+
+---
+
 # Syntax sugar for monad
 
 Some functional languages have syntax sugar for monad.
@@ -482,7 +487,7 @@ end
 - Extract fragments of source code
 - Reconstruct source code
 - Wrap into new proc (to cache reconstructed code)
-- Eval new source code
+- `instance_eval` new source code
 
 ---
 
@@ -852,7 +857,7 @@ State handles 2 pipelines.
 # ParserCombinator
 
 Parser also contains a proc.
-that proc receives `String` and returns `[Object, String]`.
+that proc receives `String` and returns `[[Object, String]]`.
 `Object` is result of parsing. `String` is remained characters.
 
 `flat_map` expresses parser combination.
@@ -866,9 +871,9 @@ that proc receives `String` and returns `[Object, String]`.
 def flat_map(&pr)
   self.class.new(
     proc do |str0|
-      result0 = run_parser(str0)
-      result0.flat_map do |consumed, remained|
-        next_parser = pr.call(consumed)
+      result0 = run_parser(str0) # return Array
+      result0.flat_map do |output, remained|
+        next_parser = pr.call(output)
         next_parser.run_parser(remained)
       end
     end
@@ -891,8 +896,7 @@ def |(other)
   self.class.new(
     proc do |str|
       result0 = run_parser(str)
-      result1 = other.run_parser(str)
-      result0.empty? ? result1 : result0
+      result0.empty? other.run_parser(str) : result0
     end
   )
 end
