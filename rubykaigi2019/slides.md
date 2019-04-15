@@ -68,7 +68,7 @@ pp ast
 
 ---
 
-# TracePoing#enable can receive a Proc
+# TracePoint#enable can receive a Proc
 
 ```ruby
 pr = proc do
@@ -177,7 +177,6 @@ from Wikipedia https://en.wikipedia.org/wiki/Monad_(functional_programming).
 ---
 
 # I think that I may be able to implement Monad syntax sugar by Ruby black magics.
-# If I can implement, I realize very useful and general abstraction in Ruby.
 
 ---
 
@@ -196,6 +195,8 @@ from Wikipedia https://en.wikipedia.org/wiki/Monad_(functional_programming).
 
 Today, I will not explain mathmatics.
 I will talk about only programming technique.
+
+ここまでで5～6分ぐらいだと良いなあ
 
 ---
 
@@ -445,8 +446,9 @@ This is valid ruby code.
 And Ruby treats `a` as assigned local variable!
 Moreover, most ruby programmers have not written such codes.
 
-In other words, I can take posession of the syntax!!
-I can change the behavior freely!!
+In other words, I can change the behavior freely!!
+
+![dora.jpg](dora.jpg)
 
 ---
 
@@ -488,6 +490,8 @@ end
 - Reconstruct source code
 - Wrap into new proc (to cache reconstructed code)
 - `instance_eval` new source code
+
+ここまでで20分弱だと良いなあ
 
 ---
 
@@ -639,6 +643,8 @@ instance_exec(
 - Future
 - State
 - ParserCombinator
+
+ここまでで30分ぐらい
 
 ---
 
