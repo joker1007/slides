@@ -35,7 +35,7 @@ We provide a web service as ...
 - Analytics of Mobile Apps, Web Apps.
 - Marketing Automation.
 
-Of course, We're hiring!!
+## Of course, We're hiring!!
 
 ---
 
@@ -601,7 +601,7 @@ trace = TracePoint.new(:line) do |tp|
 end
 
 catch(:escape) do
-  # In Ruby-2.6, TracePoint limits tracking target.
+  # In Ruby-2.6, TracePoint can limit tracking target.
   trace.enable(target: block)
   block.call
 ensure
@@ -610,8 +610,8 @@ end
 ```
 ---
 
-# I got Binding of Proc!!
-# Binding has everything for black magic.
+# I got a Binding of Proc!!
+# And Binding has everything for black magic.
 
 ---
 
@@ -779,6 +779,8 @@ Concurrent::Promises.make_future(5).monadic_eval do |x|
   pure(a + d + e)
 end # Return Future(19)
 ```
+
+like `async` syntax of JavaScript.
 
 ---
 
@@ -997,7 +999,7 @@ By this implementation, I recognized the fun of monadic programming again.
 
 ---
 
-# At last, I never recommend using this gem on production!!
+# At last, I never recommend using this gem on production now!!
 
 If you are interested in TracePoint and AST,
 Examples of the gem's code are helpful for you, maybe.
