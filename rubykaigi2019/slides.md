@@ -25,21 +25,22 @@ style: |
 - I familiar with ...
   - Ruby/Rails
   - Ruby Black Magic (TracePoint)
-  - Bigquery
-  - fluentd
-  - Hive/Presto/Cassandra
+- Speaker of RubyKaigi2018, RubyConf2018
+
 
 ---
 
 ![Repro](repro_logo.png)
-We provide a service as ...
+We provide a web service as ...
 - Analytics of Mobile Apps, Web Apps.
 - Marketing Automation.
+
+Of course, We're hiring!!
 
 ---
 
 ![height:600px](asakusarb.png)
-I am a member of amazing Ruby community.
+I am a member of an amazing Ruby community.
 
 ---
 
@@ -47,7 +48,9 @@ I am a member of amazing Ruby community.
 
 ---
 
-# Compose proc by `Proc#>>`, `Proc#<<`
+# Composing proc
+- `Proc#>>`
+- `Proc#<<`
 
 ---
 
@@ -123,11 +126,11 @@ counter.call # => 1
 counter.call # => 2
 ```
 
-Proc keep the enviornment of the scope where it is created.
+Proc keeps the environment of the scope where it is created.
 
 ---
 
-# Method can receive "Proc" as block
+# Method can receive a "Proc" as block
 
 ```ruby
 def with_retry(exception, &block)
@@ -176,7 +179,8 @@ from Wikipedia https://en.wikipedia.org/wiki/Monad_(functional_programming).
 
 ---
 
-# I think that I may be able to implement Monad syntax sugar by Ruby black magics.
+# I thinked.
+# "I can implement true Monad syntax sugar by Ruby black magics."
 
 ---
 
@@ -193,8 +197,8 @@ from Wikipedia https://en.wikipedia.org/wiki/Monad_(functional_programming).
 - Implement monadic syntax in Ruby
 - Examples, DEMO
 
-Today, I will not explain mathmatics.
-I will talk about only programming technique.
+Today, I will not explain mathematics.
+I will talk about only the programming technique.
 
 ここまでで5～6分ぐらいだと良いなあ
 
@@ -203,11 +207,12 @@ I will talk about only programming technique.
 # Functor
 
 Functor ...
-- is a container having a context for specific purpose.
+- is a container
+- has a context for specific purpose.
 - is a object that can be mapped by any function.
 
 
-Most popular functor in Ruby is "Array".
+The most popular functor in Ruby is "Array".
 
 ```ruby
 [1,2,3].map { |i| i.to_s }
@@ -217,10 +222,10 @@ In Haskell, `map` for Functor is called `fmap`.
 
 ---
 
-# Why Functor is useful
+# Why is Functor useful
 
 Without functor and map, a container needs to implement all methods for any object that it may contain.
-Functor makes a container enable to collaborate any methods.
+Functor makes a container enable to collaborate with any methods.
 
 ---
 
@@ -234,7 +239,7 @@ functor.fmap(&:itself) == functor
 functor.fmap(&(proc_a >> proc_b)) == functor.fmap(&proc_a).fmap(&proc_b)
 ```
 
-These laws ensure that behaviors of a functor is proper.
+These laws ensure that the behaviors of a functor are proper.
 
 ---
 
@@ -252,8 +257,8 @@ end
 ```
 
 This sample outputs nested array.
-Of course, we can use `flatten`, `flat_map`.
-But we have more functional approach.
+Of course, we can use `flatten` and `flat_map`.
+But we have a more functional approach.
 
 ---
 
@@ -293,7 +298,7 @@ end
 
 #  Applicative also requires some laws
 
-But laws of Applicative Functor are more complicated than one of Functor.
+But laws of Applicative Functor are more complicated than ones of Functor.
 
 Sorry, I omit explaining details.
 
@@ -301,9 +306,9 @@ Sorry, I omit explaining details.
 
 # What is difference between Applicative and Monad
 
-Applicative Functor can not express multiple dependent effects.
+Applicative Functor cannot express multiple dependent effects.
 
-For example, a calculations that may fail depends on whether previous calculations succeeded or failed.
+For example, a calculation that may fail depends on whether previous calculations succeeded or failed.
 
 In such cases, Monad is useful.
 
@@ -330,11 +335,11 @@ it is called "bind operator".
 
 # What is >>= (bind operator) ?
 
-In case of array,
+In the case of Array,
 
-`Array#bind` receives a function that receives item contained the array and outputs new array.
+`Array#bind` receives a function that receives an item contained by the array and outputs new array.
 
-like following.
+Example.
 
 ```ruby
 ["foo","bar"].bind { |s| s.split(//) }
@@ -347,7 +352,7 @@ In fact, it's `flat_map`
 
 # Monad in Scala
 
-Scala has syntax sugar for monad.
+Scala has a syntax sugar for monad.
 
 ```scala
 for {
@@ -357,7 +362,7 @@ for {
 // Return Some(10 + y) or None
 ```
 
-Scala transforms this codes to `flat_map` style internally.
+Scala transforms this code to `flat_map` style internally.
 Like below.
 
 ```scala
@@ -396,7 +401,7 @@ Some(10).flatMap { x =>
 }
 ```
 
-frequent appearance of `flatMap` is very noisy.
+The frequent appearance of `flatMap` is very noisy.
 `{`, `}` is the same.
 indent++.
 
@@ -452,7 +457,7 @@ In other words, I can change the behavior freely!!
 
 ---
 
-# Review code transformation
+# Review the code transformation
 
 ```ruby
 [1,2,3].monadic_eval do |i|
@@ -461,7 +466,7 @@ In other words, I can change the behavior freely!!
 end
 ```
 
-transform to
+transforms to
 
 ```ruby
 [1,2,3].flat_map do |i|
@@ -473,16 +478,16 @@ end
 
 ---
 
-# It is difficult to resolve nested do-end by method chain
+# It is difficult to resolve nested do-end by method chain.
 
 # OK, AST Transformation!!
-# We already have `RubyVM::AST.of`
+# We already have `RubyVM::AST.of`.
 
-# It is new feature of Ruby-2.6 and very useful for handling AST.
+# It is a new feature of Ruby-2.6 and very useful for handling AST.
 
 ---
 
-# Breakdown of implementation
+# Breakdown of my implementation
 
 - Extract AST from given block by `RubyVM::AST.of`
 - Detect a pattern like `a <<= foo`
@@ -495,7 +500,7 @@ end
 
 ---
 
-# Detect a pattern
+# Detect the pattern
 
 ```ruby
 def __is_bind_statement?(node)
@@ -507,7 +512,7 @@ end
 
 ---
 
-# Extract fragments of source code
+# Extract fragments of codes
 
 ```ruby
 # @param source [Array<String>] lines of source code
@@ -526,7 +531,7 @@ end
 
 ---
 
-# Reconstruct source code
+# Reconstruct codes
 
 ```ruby
 def __transform_node(source, buf, node, last_stmt: false)
@@ -557,7 +562,7 @@ end
 
 ---
 
-# Wrap into new proc
+# Wrap into a new proc
 
 ```ruby
 gen = "proc { |#{caller_local_variables.map(&:to_s).join(",")}|
@@ -568,14 +573,14 @@ Monad.proc_cache["#{block_location[0]}:#{block_location[1]}"] = pr
 ```
 
 `instance_eval` outputs a proc object which contains transformed process.
-And I cached it in order to avoid source code transformation repeatedly.
+And I cached it to avoid source code transformation repeatedly.
 
 ---
 
 # Handling local variables
 
-Reconstructing source code lose local variables,
-because environment contained by block is lost.
+Reconstructing codes lose local variables,
+because the environment contained by block is lost.
 
 Binding is required to handle local variables.
 
@@ -583,7 +588,7 @@ Binding is required to handle local variables.
 
 # That is when TracePoint is effective!
 
-# I found a technique to get Binding of given block
+# I found a technique to get Binding of a given block
 
 ---
 
@@ -605,7 +610,7 @@ end
 ```
 ---
 
-# I got Binding of proc!!
+# I got Binding of Proc!!
 # Binding has everything for black magic.
 
 ---
@@ -625,7 +630,7 @@ I got local_variables and copy into generated proc.
 
 ---
 
-At last, instance_exec generated proc with local variables of caller.
+At last, instance_exec generates proc with local variables of the caller.
 
 ```ruby
 instance_exec(
@@ -811,7 +816,7 @@ end
 run_state(s0) -> [a, s2] -> block.call(a) ->
 new state monad -> run_state(s1)
 
-Wrap these processes by new State class.
+These processes are wrapped by the new State class.
 
 ---
 
@@ -864,7 +869,7 @@ State handles 2 pipelines.
 
 Parser also contains a proc.
 that proc receives `String` and returns `[[Object, String]]`.
-`Object` is result of parsing. `String` is remained characters.
+`Object` is a result of parsing. `String` is remained characters.
 
 `flat_map` expresses parser combination.
 `|` expresses selective parser.
@@ -887,7 +892,7 @@ def flat_map(&pr)
 end
 ```
 
-Wrapping processes (belows) by `Proc`.
+Below processes is wrapped by `Proc`.
 
 Get result -> given proc processes result ->
 Get New Parser -> parse remained chars.
@@ -995,6 +1000,6 @@ By this implementation, I recognized the fun of monadic programming again.
 # At last, I never recommend using this gem on production!!
 
 If you are interested in TracePoint and AST,
-Examples of the gem's code is helpful for you, maybe.
+Examples of the gem's code are helpful for you, maybe.
 
 And, let's enjoy darkness programming!!
