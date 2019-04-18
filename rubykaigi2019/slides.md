@@ -20,7 +20,8 @@ style: |
 
 # self.inspect
 
-- @joker1007
+- id: @joker1007
+- name: Tomohiro Hashidate
 - Repro inc. CTO
 - I familiar with ...
   - Ruby/Rails
@@ -745,6 +746,10 @@ either { Balance.find_by!(user: user_a) }.monadic_eval do |balance_a|
     .process # return Either
 end # return Right(result) or Left(exception)
 ```
+
+Either hides error handling behind monad syntax.
+And it has a high affinity with pattern matching.
+Pattern matching is very hot topic.
 
 ---
 
