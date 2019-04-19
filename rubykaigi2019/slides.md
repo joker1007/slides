@@ -416,6 +416,8 @@ indent++.
 
 # Monad syntax in Ruby
 
+https://github.com/joker1007/monar
+
 ```ruby
 calc = ->(*val) do
   val.monadic_eval do |x|
@@ -546,7 +548,7 @@ def __transform_node(source, buf, node, last_stmt: false)
       rhv.last_lineno,
       rhv.last_column).chomp
     buf[0].concat(
-      "(#{origin}).flat_map do |#{lvar}|\n#{"pure(#{lvar})\n" if last_stmt}"
+      "(#{origin}).flat_map do |#{lvar}|\n"
     )
     buf[1] += 1
   else
@@ -999,6 +1001,7 @@ end
 - Monad is not difficult, It's `flat_map`
 - The abstraction of monad is very powerful
 - Syntax is very important
+- I want other representations for nested block
 
 By this implementation, I recognized the fun of monadic programming again.
 
