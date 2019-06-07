@@ -1,6 +1,21 @@
+---
+class: invert
+style: |
+  section.larger h1 {
+    font-size: 120px;
+  }
+  h1 {
+    font-size: 56px;
+  }
+  section {
+    font-size: 34px;
+  }
+---
+
 # †Ruby黒魔術経典†
 
 ### @joker1007 (Repro inc. CTO)
+### 名古屋Ruby会議04
 
 ---
 
@@ -10,6 +25,15 @@
 - Repro inc. CTO
 - Data Engineering, Architect
 - Rubyで悪事を働く人と見做されている
+
+---
+
+![Repro](repro_logo.png)
+We provide a web service as ...
+- Analytics of Mobile Apps, Web Apps.
+- Marketing Automation.
+
+## We're hiring!!
 
 ---
 
@@ -23,11 +47,23 @@ https://youtu.be/1mauqP9zWbM?t=31
 
 ---
 
-# メタプログラミングや魔術的な挙動をするコードは強力だが侵してはならないこともある
+# メタプログラミングや魔術的な挙動をする
+# コードは強力だが
+# 侵してはならないこともある
 
 ---
 
-# この話では、黒魔術において守るべきルールと、実際に魔術を編み出すために使えるパーツ、考え方を紹介する
+# 今日の議題
+
+以下の内容について話す。
+
+- 黒魔術において守るべきルール
+- 実際に魔術を編み出すために使えるパーツ
+- 考え方の具体例
+
+---
+
+# Part1 守りの黒魔術
 
 ---
 
@@ -59,7 +95,8 @@ evalを使う場合に定義場所のロケーションを適切に設定する�
 
 ## パフォーマンスを意識すること
 
-evalやbindingは負荷が高い。呼び出し回数を少なくするために以下の様な方法が使える
+evalやbindingは負荷が高い。
+呼び出し回数を少なくするために以下の様な方法が使える。
 
 - クラスレベルでソースコードをキャッシュする
 - クラス定義時や初回実行時のみ動作する様にする
@@ -73,13 +110,14 @@ evalやbindingは負荷が高い。呼び出し回数を少なくするために
 ## TracePointの利用は明示的に
 
 そして、絶対にensureでdisableすること。
-途中で例外が発生するとtraceが有効のままになる。traceが有効のままになるとマジで何が起きるか分からない。
+途中で例外が発生するとtraceが有効のままになる。
+traceが有効のままになるとマジで何が起きるか分からない。
 フックが暴走してstack level too deepになるのはまだ良い方。
 
 ---
 
 
-# 黒魔術に使えるAPIの探し方
+# Part2 黒魔術に使えるAPIの探し方
 
 ---
 
@@ -99,26 +137,36 @@ evalやbindingは負荷が高い。呼び出し回数を少なくするために
 - Kernel
 - (ObjectSpace)
 
-一回読んでも忘れるから、とりあえずこの辺りを読み返す癖を付けておく。
-ちなみに、RubyVM::AbstractSyntaxTreeはまだるりまが無いです。 (プルリクチャンス)
+---
+
+一回読んでも忘れるから、
+とりあえずこの辺りを読み返す癖を付けておく。
+ちなみに、`RubyVM::AbstractSyntaxTree`はまだるりまが無いです。 
+(プルリクチャンス)
 
 ---
 
-# 使えそうな機能の目安
+# 使えそうな機能の例
 
 - 評価コンテキスト操作
   - eval系
 - トリガー/フック
-  - メソッドフック, TracePoint, included, inherited, method\_missing, trace\_var, trap
+  - メソッドフック, TracePoint, included, inherited, method\_missing, trace\_var, trap, finalizer
 - 大域脱出
   - throw/catch, Fiber
+
+---
+
+# 使えそうな機能の例 (続き)
+
 - オブジェクト参照
-  - \_variable\_get系
+  - \_variable\_get系, const\_get, ObjectSpace
 - 変数/定数操作
   - \_variable\_set系, const\_set
 - メタデータ取得
   - MethodやProcから取れる情報
 - メソッドの動的定義
+  - define\_method, module\_eval
 
 ---
 
@@ -126,6 +174,8 @@ evalやbindingは負荷が高い。呼び出し回数を少なくするために
 
 - メソッド定義
 - DSL
+- 動的解析
+- 静的解析
 - 自動的/暗黙的処理の追加
 - 言語拡張
 
@@ -133,19 +183,22 @@ evalやbindingは負荷が高い。呼び出し回数を少なくするために
 
 ---
 
-# 考え方の具体例
+# Part3 考え方の具体例
 # 暗黙のブロック引数 `it` を作ってみよう
 
 see. https://bugs.ruby-lang.org/issues/15897
 
 ---
 
-procの中で暗黙の内に`it`でパラメータを参照できるをRubyの動作に置き換えるとどういうことかを考えてみる。
+**procの中で暗黙の内に`it`でパラメータを参照できるとは、
+Rubyの動作に置き換えるとどういうことかを考えてみる。**
 
 - 評価コンテキスト内で`it`というローカル変数に値が入っている
 - procのselfに`it`というメソッドが定義されていて、パラメータを取得できる
 - procの外側で`it`が定義されている。
   - ローカル変数 or 引数
+
+これらのどれかが実現できれば良さそう。
 
 ---
 
@@ -168,7 +221,7 @@ procの中で暗黙の内に`it`でパラメータを参照できるをRubyの�
   - 特異メソッドとして定義すれば可能かも
 - しかしスコープを抜けた後も参照できてしまう
 - Refinementsは使えないか
-  ブロックの定義が別の場所なのでevalが必要
+  - ブロックの定義が別の場所なのでevalが必要
 - ローカル変数方式と同様の問題がある
 
 ---
@@ -181,14 +234,15 @@ procの中で暗黙の内に`it`でパラメータを参照できるをRubyの�
 
 ---
 
-# 結論
-# 恐らくevalが必須
-# evalするためにブロックのソースコードが必要
+# 結論:
+## 恐らくevalが必須
+## そしてprocでwrap方式が現実的
+## evalするためにはソースコード断片が必要
 
 ---
 
 # ブロックのソースコードを取る方法
-# RubyVM::AST.of or parser gemで位置を特定し読む
+## RubyVM::AST.of or parser gemで位置を特定し読む
 
 (またお前か)
 
@@ -205,7 +259,12 @@ module Ext
     args_tbl = ast.children[0]
     block_node = ast.children[2]
     if args_tbl.empty?
-      extracted = extract_source(source, block_node.first_lineno, block_node.first_column, block_node.last_lineno, block_node.last_column)
+      extracted = extract_source(
+        source,
+        block_node.first_lineno,
+        block_node.first_column,
+        block_node.last_lineno,
+        block_node.last_column)
       new_block = proc_binding.eval("proc { |it| #{extracted} }")
       super(*args, &new_block)
     else
@@ -217,12 +276,31 @@ Array.prepend(Ext)
 
 n = 3
 [1, 2, 3].map { p it + n }
+# => [4, 5, 6]
 ```
 
 ---
 
-# 実は今回のテクニックはRubyKaigi 2019で話したものと同じパターン
+# 出来た！
+# 後はgemにするだけ
 
 ---
 
-# 
+**こんな感じで、自分の場合はゴールから逆算して考える。
+やりたい事が出来るとはRubyにおいてオブジェクトの状態や変数のスコープ、メソッドの定義がどうなっていればいいかを想像し、そこに至る方法を逆向きに辿って実現可能な方法を考える。**
+
+---
+
+# ちなみに、実はこれ
+# RubyKaigi2019で話したものと同じ
+# パターンを使っている
+
+
+---
+
+# 最後に
+
+**黒魔術を使うためにはRubyの挙動や各オブジェクトが何なのかということを詳しく知る必要がある。
+魔術的な挙動を起こす方法を知ることは、安全なコードの書き方を知ることにも繋がる。
+いざという時の選択肢も増える。
+Rubyより深く楽しみ、より良いコードに繋げよう**
