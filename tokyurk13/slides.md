@@ -5,7 +5,23 @@
 
 ---
 
-# 私はTracePointが好きだ
+# またTracePointか
+
+```
+やあ （´・ω・｀)
+ようこそ、プレモルハウスへ。
+このプレモルはサービスだから、まず飲んで落ち着いて欲しい。
+
+うん、「また」なんだ。済まない。
+仏の顔もって言うしね、謝って許してもらおうとも思っていない。
+
+でも、このLTを見たとき、君は、きっと言葉では言い表せない
+「ときめき」みたいなものを感じてくれたと思う。
+殺伐とした世の中で、そういう気持ちを忘れないで欲しい
+そう思って、このLTを立てたんだ。
+
+じゃあ、注文を聞こうか。
+```
 
 ---
 
@@ -249,5 +265,197 @@ index 93b1ebfe7a..471395dc60 100644
 
 せっかく書いたんだけど、このままではパッチを送るだけの説得力が無い……。
 というわけでユースケースを募集しております。
+(`:call`の方はsorbetの型定義を自動生成するとかに利用できるかもしれないけど。)
 
 目的と手段が入れ替わるのはプログラミングではよくありますよね。
+
+---
+
+# Appendix (時間足りないと思う)
+
+---
+
+# :callイベントの場合
+
+Rubyのメソッド定義は`def`と`define_method`で定義できる。
+実はどちらで定義されたかによって呼び出しパスが異なる。
+
+多分、`define_method`だとスコープが切り替わらないからだと思う。
+
+---
+
+# `def`の場合
+
+`trace_xxx`というiseqの命令が`vm_trace`関数を実行する。
+最終的に`vm_insnhelper.c`の`vm_trace_hook`がhookを処理する。
+
+```c
+static inline void
+vm_trace_hook(rb_execution_context_t *ec, rb_control_frame_t *reg_cfp, const VALUE *pc,
+              rb_event_flag_t pc_events, rb_event_flag_t target_event,
+              rb_hook_list_t *global_hooks, rb_hook_list_t *local_hooks, VALUE val)
+{
+    rb_event_flag_t event = pc_events & target_event;
+    VALUE self = GET_SELF();
+
+    VM_ASSERT(rb_popcount64((uint64_t)event) == 1);
+
+    if (event & global_hooks->events) {
+        /* increment PC because source line is calculated with PC-1 */
+        reg_cfp->pc++;
+        vm_dtrace(event, ec);
+        rb_exec_event_hook_orig(ec, global_hooks, event, self, 0, 0, 0 , val, 0);
+        reg_cfp->pc--;
+    }
+
+    if (local_hooks != NULL) {
+        if (event & local_hooks->events) {
+            /* increment PC because source line is calculated with PC-1 */
+            reg_cfp->pc++;
+            rb_exec_event_hook_orig(ec, local_hooks, event, self, 0, 0, 0 , val, 0);
+            reg_cfp->pc--;
+        }
+    }
+}
+```
+
+---
+
+# envポインタから引数を取る
+
+```diff
+diff --git a/vm_insnhelper.c b/vm_insnhelper.c
+index 93b1ebfe7a..471395dc60 100644
+--- a/vm_insnhelper.c
++++ b/vm_insnhelper.c
+@@ -4337,6 +4343,36 @@ vm_trace_hook(rb_execution_context_t *ec, rb_control_frame_t *reg_cfp, const VAL
+
+     VM_ASSERT(rb_popcount64((uint64_t)event) == 1);
+
++    if (event & (RUBY_EVENT_CALL | RUBY_EVENT_B_CALL)) {
++        const rb_iseq_t *iseq = reg_cfp->iseq;
++        int local_table_size = iseq->body->local_table_size;
++        int not_keyword_arg_size = iseq->body->param.lead_num + iseq->body->param.opt_num + iseq->body->param.flags.has_rest + iseq->body->param.post_num;
++
++        int keyword_size = 0;
++        int keyword_rest = 0;
++        if (iseq->body->param.keyword) {
++            keyword_size = iseq->body->param.keyword->num;
++            keyword_rest = iseq->body->param.keyword->rest_start;
++        }
++
++        val = rb_ary_new_from_values(not_keyword_arg_size, reg_cfp->ep - (local_table_size + 2));
++
++        if (keyword_size > 0) {
++            const VALUE *keyword_args = reg_cfp->ep - (local_table_size + 2) + not_keyword_arg_size;
++            VALUE hash = rb_hash_new();
++            int i;
++            for (i=0; i<keyword_size; i++) {
++                rb_hash_aset(hash, rb_id2sym(*(iseq->body->param.keyword->table + i)), *(keyword_args + i));
++            }
++            rb_ary_push(val, hash);
++        }
++
++        if (keyword_rest > 0) {
++            const VALUE *keyword_rest = reg_cfp->ep - (local_table_size + 2) + not_keyword_arg_size + keyword_size + 1;
++            rb_ary_push(val, *keyword_rest);
++        }
++    }
++
+```
+
+---
+
+# `define_method`の場合
+
+`vm.c`の`invoke_bmethod`でhookを処理している。
+
+```c
+static VALUE
+invoke_bmethod(rb_execution_context_t *ec, const rb_iseq_t *iseq, VALUE self, const struct rb_captured_block *captured, const rb_callable_method_entry_t *me, VALUE type, int opt_pc)
+{
+    /* bmethod */
+    int arg_size = iseq->body->param.size;
+    VALUE ret;
+    rb_hook_list_t *hooks;
+
+    VM_ASSERT(me->def->type == VM_METHOD_TYPE_BMETHOD);
+
+    vm_push_frame(ec, iseq, type | VM_FRAME_FLAG_BMETHOD, self,
+		  VM_GUARDED_PREV_EP(captured->ep),
+		  (VALUE)me,
+		  iseq->body->iseq_encoded + opt_pc,
+		  ec->cfp->sp + arg_size,
+		  iseq->body->local_table_size - arg_size,
+		  iseq->body->stack_max);
+
+    RUBY_DTRACE_METHOD_ENTRY_HOOK(ec, me->owner, me->def->original_id);
+    EXEC_EVENT_HOOK(ec, RUBY_EVENT_CALL, self, me->def->original_id, me->called_id, me->owner, Qnil);
+
+    if (UNLIKELY((hooks = me->def->body.bmethod.hooks) != NULL) &&
+        hooks->events & RUBY_EVENT_CALL) {
+        rb_exec_event_hook_orig(ec, hooks, RUBY_EVENT_CALL, self,
+                                me->def->original_id, me->called_id, me->owner, Qnil, FALSE);
+    }
+    VM_ENV_FLAGS_SET(ec->cfp->ep, VM_FRAME_FLAG_FINISH);
+    ret = vm_exec(ec, TRUE);
+
+    EXEC_EVENT_HOOK(ec, RUBY_EVENT_RETURN, self, me->def->original_id, me->called_id, me->owner, ret);
+    if ((hooks = me->def->body.bmethod.hooks) != NULL &&
+        hooks->events & RUBY_EVENT_RETURN) {
+        rb_exec_event_hook_orig(ec, hooks, RUBY_EVENT_RETURN, self,
+                                me->def->original_id, me->called_id, me->owner, ret, FALSE);
+    }
+    RUBY_DTRACE_METHOD_RETURN_HOOK(ec, me->owner, me->def->original_id);
+    return ret;
+}
+```
+
+---
+
+spからでも取れるが、直前の関数まで`argv`が渡ってきているので、直接渡せそう。
+
+```diff
+diff --git a/vm.c b/vm.c
+index 7ad6bdd264..436f0aa4c8 100644
+--- a/vm.c
++++ b/vm.c
+@@ -1031,7 +1031,7 @@ invoke_block(rb_execution_context_t *ec, const rb_iseq_t *iseq, VALUE self, cons
+ }
+
+ static VALUE
+-invoke_bmethod(rb_execution_context_t *ec, const rb_iseq_t *iseq, VALUE self, const struct rb_captured_block *captured, const rb_callable_method_entry_t *me, VALUE type, int opt_pc)
++invoke_bmethod(rb_execution_context_t *ec, const rb_iseq_t *iseq, VALUE self, int argc, const VALUE *argv, const struct rb_captured_block *captured, const rb_callable_method_entry_t *me, VALUE type, int opt_pc)
+ {
+     /* bmethod */
+     int arg_size = iseq->body->param.size;
+@@ -1049,12 +1049,18 @@ invoke_bmethod(rb_execution_context_t *ec, const rb_iseq_t *iseq, VALUE self, co
+                  iseq->body->stack_max);
+
+     RUBY_DTRACE_METHOD_ENTRY_HOOK(ec, me->owner, me->def->original_id);
+-    EXEC_EVENT_HOOK(ec, RUBY_EVENT_CALL, self, me->def->original_id, me->called_id, me->owner, Qnil);
++
++    VALUE data = Qundef;
++    rb_hook_list_t *global_hooks = rb_vm_global_hooks(ec);
++    if (UNLIKELY(global_hooks->events & (RUBY_EVENT_CALL))) {
++       data = rb_ary_new_from_values(argc, argv);
++    }
++    EXEC_EVENT_HOOK(ec, RUBY_EVENT_CALL, self, me->def->original_id, me->called_id, me->owner, data);
+
+     if (UNLIKELY((hooks = me->def->body.bmethod.hooks) != NULL) &&
+         hooks->events & RUBY_EVENT_CALL) {
+         rb_exec_event_hook_orig(ec, hooks, RUBY_EVENT_CALL, self,
+-                                me->def->original_id, me->called_id, me->owner, Qnil, FALSE);
++                                me->def->original_id, me->called_id, me->owner, data, FALSE);
+     }
+     VM_ENV_FLAGS_SET(ec->cfp->ep, VM_FRAME_FLAG_FINISH);
+     ret = vm_exec(ec, TRUE);
+@@ -1102,7 +1108,7 @@ invoke_iseq_block_from_c(rb_execution_context_t *ec, const struct rb_captured_bl
+        return invoke_block(ec, iseq, self, captured, cref, type, opt_pc);
+     }
+     else {
+-       return invoke_bmethod(ec, iseq, self, captured, me, type, opt_pc);
++       return invoke_bmethod(ec, iseq, self, argc, argv, captured, me, type, opt_pc);
+     }
+ }
+```
