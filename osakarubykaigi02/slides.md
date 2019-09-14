@@ -137,15 +137,10 @@ def partial(*args, **kw, &block)
     new_args = args.each_with_object([]) do |a, arr|
       if a.is_a?(MethodPlus::Placeholder)
         if (args2.size - 1) >= placeholder_idx
-          arr << args2[placeholder_idx].tap { placeholder_idx += 1 }
-        end
+          arr << args2[placeholder_idx].tap { placeholder_idx += 1 }; end
       else
-        arr << a
-      end
-    end
-
+        arr << a; end; end
     # ...
-
     new_block = block2 || block
     call(*new_args, **new_kw, &new_block)
   end
@@ -158,7 +153,7 @@ end
 
 TracePointです。(いつもの)
 
-メソッド、ブロック呼び出し毎にstacklevelを記録して、合致する時にmethodをcallするTracePointを動かす。
+ブロック呼び出し毎にstacklevelを記録して、合致する時にmethodをcallするTracePointを動かす。
 かなり単純化するとこんな感じ。
 
 ```ruby
@@ -176,7 +171,7 @@ end
 trace.enable(target: iseq) # => important
 ```
 
-実際は、マルチスレッドで動作した時の挙動調整とか複数回deferが入れ子のブロックで呼ばれた時に他のTracePointを止めない様な工夫が要る。
+実際は、もうちょっと工夫が要る。
 
 ---
 
@@ -194,7 +189,8 @@ trace.enable(target: iseq) # => important
 それが取れれば、iseqが持ってる情報が色々使えたり、b_returnフックで使い易くなるのだが……。
 一応、抜け道は(自分の知る限り)一つだけある。
 
-メソッドは自身の処理中に`method(:__callee__)`でMethodが取れる。
+
+ちなみに、メソッドは自身の処理中に`method(:__callee__)`でMethodが取れる。
 
 ---
 
@@ -219,6 +215,7 @@ iseq = RubyVM::DebugInspector.open { @1.frame_iseq(2) }
 # まとめ
 
 - Method Reference Syntaxを使った新しい書き方のスタイルを提案してみた。
+  - `foo.:long_method.async(:bar)`
 - 組込みクラスを拡張する点はちょっと危ういのでRefinementsの方が良いかも。
 - パターンマッチもNumbered Parameterも便利！
 - TracePointのtarget指定を活用しよう。
