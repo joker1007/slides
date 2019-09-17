@@ -186,6 +186,13 @@ trace.enable(target: iseq) # => important
 # TracePointをターゲット指定する時の課題
 
 今処理中のブロックのiseqを取得する方法が、ほとんど無い。
+
+```ruby
+(1..10).each do |i|
+  # ここで、このdo-end内のiseqを取るのが困難
+end
+```
+
 それが取れれば、iseqが持ってる情報が色々使えたり、b_returnフックで使い易くなるのだが……。
 一応、抜け道は(自分の知る限り)一つだけある。
 
@@ -208,7 +215,7 @@ iseq = RubyVM::DebugInspector.open { @1.frame_iseq(2) }
 
 ちなみにこのgemのREADMEにはこう書いてある。
 
-> do not use this library outside of debugging situations.
+> do not use this library outside of debugging situations. :sweat:
 
 ---
 
