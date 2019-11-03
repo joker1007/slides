@@ -25,6 +25,7 @@ style: |
 - Repro inc. CTO
 - TracePoint芸人
 - 最近はKafkaを触っている
+- 最近肺炎に罹って死にそうになってた
 
 ---
 
@@ -80,7 +81,7 @@ style: |
 自分でもRubyVMの動きを調べてみようと思う方へ
 
 - `-O0`でコンパイルしたRubyを用意する
-  - `./configure --prefix=${INSTAKK_DIR} optflags="-O0"`
+  - `./configure --prefix=${INSTALL_DIR} optflags="-O0"`
 - 簡単な機能だけでも`gdb`を使える様になっておく
 
 正直gdbで止めて追っかけないと、相当詳しくない限りVMの処理を追うのは難しい。
