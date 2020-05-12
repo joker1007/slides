@@ -13,7 +13,7 @@ GEM
       eventmachine (>= 0.12.9)
       http_parser.rb (~> 0.6.0)
     eventmachine (1.2.1)
-    ffi (1.9.14)
+    ffi (1.12.2)
     formatador (0.2.5)
     gemoji (2.1.0)
     gli (2.13.2)
