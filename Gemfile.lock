@@ -90,7 +90,7 @@ GEM
       slim (~> 4.0)
       thor (~> 1.0)
       tilt (= 2.0.9)
-    rexml (3.2.4)
+    rexml (3.2.5)
     rinku (2.0.6)
     shellany (0.0.1)
     slim (4.1.0)
