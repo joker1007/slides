@@ -48,21 +48,16 @@ RubyによるAPI呼び出しだと以下の様になります。
 client.create_function(
   function_name: "function_name",
   role: role_name,
-  package_type: "Image",
+  package_type: "Image", # Imageを指定する
   code: {
     image_uri: image_registry_uri, # 通常はECRを利用
   },
-  image_config: {
+  image_config: { # コンテナ設定の上書き
     entry_point: ["aws_lambda_ric"],
     command: ["main.LambdaEntry::RakeHandler.process"],
     working_directory: "/app/lambdas/rake_handler",
   },
-  timeout: 900,
-  memory_size: 2048,
-  vpc_config: {
-    subnet_ids: ["subnet-0000000000000"],
-    security_group_ids: ["sg-000000000000"],
-  }
+  # 省略
 )
 ```
 
@@ -113,7 +108,7 @@ Python, Node, Java, .NET, Go, Rubyは公式のクライアントが存在する�
 
 普通のRailsアプリケーションのコンテナイメージに`aws_lambda_ric`というgemを追加する。
 
-```
+```dockerfile
 WORKDIR /app
 RUN mkdir -p vendor
 COPY Gemfile Gemfile.lock /app/
@@ -145,6 +140,7 @@ Railsにおいては以下の様なケースで問題になる。
 - /tmp以外にファイル出力する様なコードを実行しようとしている
 
 弊社ではdatabase.ymlをerbから生成するコードとbootsnapで問題になったので一部調整が必要になった。
+昨今ならParameterStore等を使って環境変数を整えるなどをした方が良い。
 
 ---
 
@@ -155,6 +151,7 @@ Lambdaの挙動として起動後のプロセスが一定期間生存して再�
 解決策としては以下の様な方法になる。
 
 - そもそもRakeを使わない様にする
+- RakeのInvoke情報を都度クリアする
 - 内部でforkして子プロセスを立ち上げる (実現できた)
 
 ---
@@ -178,7 +175,10 @@ StepFunctionを利用してワークフローを構築し、複数のステッ�
 元々はステータス更新にFargateを利用していたが、起動時間が遅いためLambdaに置き換えた。
 常に3分かかっていたのが、ホットスタンバイ状態であれば2秒で処理が終わる様になった。
 
-## デプロイについて
+---
+
+# デプロイについて
+
 CapistranoでECSを更新しているが、デプロイが完了したらafter hookでLambdaのAPIを叩いてコンテナイメージのバージョンを更新する様にしている。
 イメージ自体はWebリクエストを受け付けるRailsアプリと同じものを利用している。
 これにより通常のアプリケーションデプロイフローに完全に統合できた。
@@ -190,13 +190,18 @@ CapistranoでECSを更新しているが、デプロイが完了したらafter h
 StepFunctionであればユーザーから見た非同期処理を多段に繋げて実行状況を簡単に可視化できるし、ボタン一発でリトライ出来て運用が簡単になる。
 実行ログ等もコンソールから簡単にCloudWatch Logsを参照できる。
 
-![画像を貼る]
-
 しばしばsidekiqのジョブからsidekiqのジョブを呼ぶという非常に処理の流れが分かりにくい実装が世の中には存在するが、それを避けてこういったワークフローツールを活用する方が圧倒的に見通しが良い。
 
 ---
 
-# Lambdaを利用するメリット
+# Step Functionのグラフインスペクタの例
+こんな感じで実行状況が可視化される。
+
+![stepfunction](stepfunction.png)
+
+---
+
+# Rails on Lambdaの所感
 
 AWSを使う限りではActiveJob/sidekiqはもう要らないんじゃないかという気がする。
 非同期処理は呼び出しプロトコルだけ決めてSQSにペイロードを投げる様にすれば良い。
@@ -208,12 +213,12 @@ CloudWatch Eventsを利用すればスケジュール起動も可能。
 
 # マイクロサービスへの応用
 
-Railsのコードベースを利用したまま単機能の小さな処理を独立させることが簡単になった。
+Railsのコードベースを利用したまま単機能の小さな処理を独立させることが簡単になってきた。
 Step Functionを組み合わせることで複雑な処理をサーバーレスでリトライアブルに実現できる。
-必要になったら単機能だけを別言語の実装に置き換えることも容易になる。
+必要になったら単機能だけを別言語の実装に置き換えることも容易。
 
 こういった性質から、Webリクエストに依存しない処理を小さくLambda関数にして切り出し、マイクロサービスとして独立させることに応用可能だと考えている。
-この場合、Step Functionが一つのサービスの単位になる。
+この場合、Step Functionが一つのサービスの単位になるだろう。
 
 ---
 
@@ -223,3 +228,9 @@ Lambdaの起動方法にはかなりバリエーションがあって、用途�
 呼び出し方の規約は各々の環境で決める方が良い。
 実際のところペイロードとハンドラさえ書けば後はクラウドサービス側の設定なのでGemを作る程でもない。
 加えて、自分はActiveJobの様な最大公約数的なインターフェースは後々困ることが多いので余り積極的に使わない方が良いと思っていて、そのインターフェースを整えるモチベーションも余り無かった。
+
+---
+
+# We are hiring!!
+
+# Repro inc.
