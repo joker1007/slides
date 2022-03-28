@@ -80,10 +80,10 @@ footer: ![w:128 h:48](logo.png)
 
 # Import/Export処理の特性
 
-数千万規模のユーザー情報を任意のタイミングでImport/Exportできる。
+数千万～数億規模のユーザー情報を任意のタイミングでImport/Exportできる。
 
 - パターン化できない負荷
-- それなりの実行時間と負荷
+- それなりのデータ量と実行時間
 - 任意のタイミングで並列実行
 
 言い換えると
@@ -160,6 +160,9 @@ Railsのアプリケーションコードを通常のWebサービスのコード
 といってもWebリクエストを受けている訳ではなく、Railsにおけるバックグラウンド処理の実行基盤としてAWS Lambdaが活用できる様になったということ。
 
 デプロイが完了した後は、実行のオーバーヘッドはコールドスタートでも数秒以下でAWS Fargateの起動より圧倒的に高速。
+
+過去の登壇資料: https://speakerdeck.com/joker1007/ruby-on-rails-on-lambda
+![width:48px](speakerdeck_qr.png)
 
 ---
 
@@ -265,8 +268,10 @@ State定義の中のLambdaタスクを抜粋したもの。
 
 Reproは今日紹介した様に、大規模なサービス事業にも対応できるマーケティングオートメーションサービスを提供しています。サービスの詳細は以下のURLをご覧ください。
 https://repro.io/
+![width:48px](repro_qr.png)
 
 またRepro社では、フロントエンドエンジニアから分散処理基盤を扱うデータエンジニアまで様々な技術者を募集しています。採用情報の詳細は以下のURLをご覧ください。
 https://company.repro.io/recruit/
+![width:48px](recruit_qr.png)
 
 本日はご静聴ありがとうございました。
