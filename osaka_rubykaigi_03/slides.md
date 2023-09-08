@@ -84,6 +84,8 @@ Language Server Protocolで通信するサーバープロセスで、
 サーバー側、クライアント側それぞれの定義があり、それぞれがサポートしている機能が何なのかを示すもの。
 Language Serverが提供する機能として期待されるものが何なのかはCapabilitiesの仕様を見ると理解しやすい。
 
+see. https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#languageFeatures
+
 ---
 
 # Capabilityの例 1
@@ -214,6 +216,43 @@ debug.gemではUnix Domain SocketかTCP Serverを立てることでDAPの通信�
 - [nvim-dap](https://github.com/mfussenegger/nvim-dap): DAPサーバーの立ち上げとアタッチを行う
 - [nvim-dap-ui](https://github.com/rcarriga/nvim-dap-ui): デバッガとしてのUIを提供する
 - [nvim-dap-virtual-text](https://github.com/theHamsta/nvim-dap-virtual-text): デバッガ内の変数の内容をソースコード中に表示する
+
+---
+
+# 設定例
+
+```lua
+local dap = require "dap"
+dap.adapters.ruby = function(callback, config)
+  callback({
+    type = "server",
+    host = "127.0.0.1",
+    port = "${port}",
+    executable = {
+      command = "bundle",
+      args = {
+        "exec", "rdbg", "-n", "--open", "--port", "${port}", "-c", "--",
+        "bundle", "exec", config.command, config.script,
+      },
+    },
+  })
+end
+```
+
+---
+
+```lua
+dap.configurations.ruby = {
+  {
+    type = "ruby",
+    name = "run current spec file",
+    request = "attach",
+    localfs = true,
+    command = "rspec",
+    script = "${file}",
+  },
+}
+```
 
 ---
 
