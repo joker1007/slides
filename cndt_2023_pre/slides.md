@@ -16,6 +16,7 @@ footer: ![w:128 h:48](logo.png)
 - 人生における大事なことは
 ジョジョから学んだ
 - 日本酒とクラフトビールが好き
+- Asakusa.rb メンバー
 
 ![bg right height:160px](./icon.jpg)
 
