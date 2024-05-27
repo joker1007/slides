@@ -1,0 +1,15 @@
+class Conference < Foo
+  attr_reader title: String
+
+  def initialize: (title: String, year: Integer) -> void
+                | (title: String) -> Integer
+                | (^((String | Integer) arg) -> Symbol, Integer) -> void
+
+  def hoge: -> Integer
+
+  def foo: -> Integer
+end
+
+interface _Foo
+  def foo: -> Integer
+end
