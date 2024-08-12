@@ -1,0 +1,21 @@
+GIT
+  remote: https://github.com/joker1007/tree_house.git
+  revision: 136cbbd7d33d687e02917798df242ffd9a1a4483
+  specs:
+    tree_house (0.1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rouge (4.3.0)
+
+PLATFORMS
+  ruby
+  x86_64-linux
+
+DEPENDENCIES
+  rouge
+  tree_house!
+
+BUNDLED WITH
+   2.5.11
