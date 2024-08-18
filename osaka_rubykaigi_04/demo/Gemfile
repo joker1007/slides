@@ -1,0 +1,6 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+gem "tree_house", github: "joker1007/tree_house"
+gem "rouge"

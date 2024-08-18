@@ -1,0 +1,11 @@
+use RBS::TypeName as TN
+
+$global: boolean
+
+class Foo[A]
+  @ids: Array[Integer]
+  def foo: (String) -> String
+
+  include Mod1
+end
+
