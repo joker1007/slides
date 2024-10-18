@@ -121,9 +121,9 @@ spark-submit \
   --schemaprovider-class org.apache.hudi.utilities.schema.SchemaRegistryProvider \
   --source-class org.apache.hudi.utilities.sources.AvroKafkaSource \
   --source-ordering-field updated_at \
-  --target-base-path s3://repro-batch-store/experiment/UserProfiles \
+  --target-base-path s3://repro-batch-store/experiment_data\
   --table-type MERGE_ON_READ \
-  --target-table UserProfiles \
+  --target-table hudi_output \
   --enable-sync \
   --continuous \
   --op UPSERT
@@ -229,7 +229,7 @@ CONSISTENT_HASHINGはハッシュ関数をかけて出力される64 bitの整�
 ```properties
 hoodie.index.type=BUCKET
 hoodie.index.bucket.engine=CONSISTENT_HASHING
-hoodie.bucket.index.hash.field=user_id
+hoodie.bucket.index.hash.field=id
 hoodie.bucket.index.num.buckets=2
 hoodie.bucket.index.min.num.buckets=1
 hoodie.bucket.index.max.num.buckets=1024
