@@ -1,3 +1,9 @@
+---
+theme: default
+paginate: true
+style:
+---
+
 # 実践Kafka Streams
 # 〜イベント駆動型アーキテクチャを添えて〜
 
