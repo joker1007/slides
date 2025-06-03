@@ -160,7 +160,7 @@ h1, h2, h3 {
 ---
 
 <!--
-footer: ![w:80 h:28](logo.png)
+footer: ![w:100 h:32](logo_white.png)
 -->
 
 # 自己紹介
@@ -169,10 +169,25 @@ footer: ![w:80 h:28](logo.png)
 - Repro株式会社 チーフアーキテクト
 - 元々はRailsエンジニアだったが、最近はJavaばかり書いている
 - 日本酒とクラフトビールが好き
-- Asakusa.rb メンバー
 - Oxygen Not Included を再開して生活が終わりつつある
 
 ![bg right height:160px](./icon.jpg)
+
+---
+
+# Asakusaから来ました
+活動中のRubyコミュニティで日本最古
+(自分は本当に浅草に住んでます)
+
+![bg right height:640px](asakusarb.png)
+
+---
+
+# 最近の仕事
+![repro height:200px](logo_white.png)
+チーフアーキテクトとして、サービス全体の中長期的な技術選定、設計アドバイス、全体アーキテクチャのデザインなどをしている。
+
+今回話す内容は事業内容が密接に関わっている。
 
 ---
 # Reproの事業
