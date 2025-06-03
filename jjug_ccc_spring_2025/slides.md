@@ -1,8 +1,155 @@
 ---
+title: 実践Kafka Streams
 theme: default
 paginate: true
-style:
+style: |
+    /* @theme rose-pine */
+    /*
+    Rosé Pine theme create by RAINBOWFLESH
+    > www.rosepinetheme.com
+
+    palette in :root
+    */
+
+    @import "default";
+    @import "schema";
+    @import "structure";
+
+    :root {
+        --base: #191724;
+        --surface: #1f1d2e;
+        --overlay: #26233a;
+        --muted: #6e6a86;
+        --subtle: #e0def4;
+        --text: #e0def4;
+        --love: #eb6f92;
+        --gold: #f6c177;
+        --rose: #ebbcba;
+        --pine: #31748f;
+        --foam: #9ccfd8;
+        --iris: #c4a7e7;
+        --highlight-low: #21202e;
+        --highlight-muted: #403d52;
+        --highlight-high: #524f67;
+
+        font-family: Pier Sans, ui-sans-serif, system-ui, -apple-system,
+            BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans,
+            sans-serif, "Apple Color Emoji", "Segoe UI Emoji", Segoe UI Symbol,
+            "Noto Color Emoji";
+        font-weight: initial;
+
+        background-color: var(--base);
+    }
+    /* Common style */
+    h1 {
+        color: var(--rose);
+        padding-bottom: 2mm;
+        margin-bottom: 12mm;
+    }
+    h2 {
+        color: var(--rose);
+    }
+    h3 {
+        color: var(--rose);
+    }
+    h4 {
+        color: var(--rose);
+    }
+    h5 {
+        color: var(--rose);
+    }
+    h6 {
+        color: var(--rose);
+    }
+    a {
+        color: var(--iris);
+    }
+    p {
+        font-size: 20pt;
+        font-weight: 600;
+        color: var(--text);
+    }
+    code {
+        color: var(--text);
+        background-color: var(--highlight-muted);
+    }
+    text {
+        color: var(--text);
+    }
+    ul {
+        color: var(--subtle);
+    }
+    li {
+        color: var(--subtle);
+    }
+    img {
+        background-color: var(--highlight-low);
+    }
+    strong {
+        color: var(--text);
+        font-weight: inherit;
+        font-weight: 800;
+    }
+    mjx-container {
+        color: var(--text);
+    }
+    marp-pre {
+        background-color: var(--overlay);
+        border-color: var(--highlight-high);
+    }
+
+    /* Code blok */
+    .hljs-comment {
+        color: var(--muted);
+    }
+    .hljs-attr {
+        color: var(--foam);
+    }
+    .hljs-punctuation {
+        color: var(--subtle);
+    }
+    .hljs-string {
+        color: var(--gold);
+    }
+    .hljs-title {
+        color: var(--foam);
+    }
+    .hljs-keyword {
+        color: var(--pine);
+    }
+    .hljs-variable {
+        color: var(--text);
+    }
+    .hljs-literal {
+        color: var(--rose);
+    }
+    .hljs-type {
+        color: var(--love);
+    }
+    .hljs-number {
+        color: var(--gold);
+    }
+    .hljs-built_in {
+        color: var(--love);
+    }
+    .hljs-params {
+        color: var(--iris);
+    }
+    .hljs-symbol {
+        color: var(--foam);
+    }
+    .hljs-meta {
+        color: var(--subtle);
+    }
+
+
 ---
+
+<style scoped>
+h1, h2, h3 {
+  color: white;
+}
+</style>
 
 # 実践Kafka Streams
 # 〜イベント駆動型アーキテクチャを添えて〜
@@ -49,7 +196,7 @@ Reproのサービスには以下の様な特徴がある。
 - バックグラウンド通信が大半を占めるので、パイプラインの非同期処理化が容易
 - エンドユーザーの一つの行動が複数の処理と変化を引き起こす
 
-例えば……
+例えばどういうものがあるか……
 
 ---
 # ユーザーセグメンテーションの更新
@@ -116,12 +263,12 @@ Javaで普通にCLIアプリケーションを書く様にストリームアプ�
 弊社では、こういった特徴の中でも特に基盤のシンプルさや学習コストの低さを重視してKafka Streamsを採用した。
 
 ---
-# Kafka Streamsの書き方
+# Kafka Streams概要
 Kafkaの1つ以上のトピックからデータをconsumeし、必要な加工や集計を行い、また別のトピックに書き出す、という処理を基本形とする。
 
 consume、データ処理、produce、の各処理をノードと呼び、そのノードをグラフ状に繋げたトポロジーというモデルを構成することでアプリケーションを記述する。
 
-![bg right height:640px](streams-architecture-topology.jpg)
+![bg right:40% height:560px](streams-architecture-topology.jpg)
 
 ---
 # Kafka Streams DSLの基本概念
@@ -500,6 +647,7 @@ Kafka Streamsとストリームアプリケーションの知見の蓄積、イ�
 ハイトラフィックをスピーディに捌くストリームアプリケーションに興味がある方。
 大量の活きたデータを支えるデータストアのR&Dや技術選定に関わってみたい方。
 新しいアーキテクチャの評価・選定に関わってみたい方。
+TypeScriptとAIをゴリゴリ活用している新規事業部などもあります。
 
 是非Reproに話を聞きにきてください！
 
