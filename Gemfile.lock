@@ -54,7 +54,7 @@ GEM
     minitest (5.17.0)
     multi_json (1.14.1)
     nenv (0.3.0)
-    nokogiri (1.14.0)
+    nokogiri (1.14.3)
       mini_portile2 (~> 2.8.0)
       racc (~> 1.4)
     notiffany (0.1.3)
