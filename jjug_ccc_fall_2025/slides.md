@@ -224,7 +224,7 @@ SaaS事業だけでなく、サービスグロースの総合的な支援も提�
 
 # RDBやKVSだけでは扱いにくいデータやサービスも存在する
 
-- Sketch
+- Sketch (確率的データ構造)
 - CRDT (Conflict-free Replicated Data Type)
 - Apache Arrowの様なオンメモリ向けデータ構造
 
@@ -290,6 +290,28 @@ rpcService.listenAt(rpcEndpoint);
 # データ読み出しのサンプルコード
 
 ```java
+KafkaStreams streams = ...
+
+// Get the key-value store CountsKeyValueStore
+ReadOnlyKeyValueStore<String, Long> keyValueStore =
+    streams.store("CountsKeyValueStore", QueryableStoreTypes.keyValueStore());
+
+// Get value by key
+System.out.println("count for hello:" + keyValueStore.get("hello"));
+
+// Get the values for a range of keys available in this application instance
+KeyValueIterator<String, Long> range = keyValueStore.range("all", "streams");
+while (range.hasNext()) {
+  KeyValue<String, Long> next = range.next();
+  System.out.println("count for " + next.key + ": " + next.value);
+}
+```
+
+---
+
+# リモートノードに対してリクエストするサンプルコード
+
+```java
 KafkaStreams streams = ...;
 // Find all the locations of local instances of the state store named "word-count"
 Collection<StreamsMetadata> wordCountHosts = streams.allMetadataForStore("word-count");
@@ -333,6 +355,7 @@ Optional<Long> result = streams.allMetadataForStore("word-count")
 
 Kafka StreamsのInteractive Queriesが提供する機能は非常にシンプル。
 
+- Streamsアプリケーションの外からReadOnlyでStateStoreの参照を取得する機能
 - クラスタに所属しているノードがConfigに登録したIPと公開ポートの一覧を返す
 - あるキーでパーティショニングした結果がどのノードに現在割り当てられているかを判別し、そのIPと公開ポートを返す
 
@@ -418,6 +441,9 @@ onStartupフックでアプリケーションを起動する
 https://github.com/joker1007/jjug_ccc_2025_fall_sample
 
 KafkaのTextsトピックに入力された文字列を単語ごとに分割してカウントし、数が多い順にソートした一覧を返すREST APIを提供する。
+
+ただし、このアプリケーションは、リモートノードへのリクエストに対応していないため複数台で動かすと正しく動かない。
+先に紹介した`allMetadataForStore`などから取得したホスト情報を利用してRESTクライアントを構成し、リクエストをフォワードすれば動作する仕組みを構築できる。
 
 ---
 
@@ -529,3 +555,24 @@ GraphQLの口を生やして複数のユーザーセグメンテーション条�
 - Kafka StreamsのInteractive Queriesを利用すると、ストリームアプリケーションに対して外部からのリクエストを受け付ける仕組みを構築できる
 - QuarkusはKafka Streamsのサポートがあり、RPCのサーバープロセスとKafka Streamsアプリケーションをまとめてコントロールしてくれる
 - クエリ可能なストリームアプリケーションは、大量のデータ処理、短いリードタイム、複雑なユースケースを合わせ持つ様な難しい問題に対する選択肢の一つとして利用できる
+
+---
+
+# 参考資料
+
+- https://kafka.apache.org/37/documentation/streams/developer-guide/interactive-queries.html
+- https://quarkus.io/guides/cdi
+- https://quarkus.io/guides/cdi-reference
+- https://quarkus.io/guides/kafka-streams
+
+---
+
+# Reproは開発者を募集中です
+
+ハイトラフィックをスピーディに捌くストリームアプリケーションに興味がある方。
+KafkaやQuarkusを使って開発してみたい方。
+最近はApache Icebergの検証・導入準備なんかもやってます。
+
+頭の片隅に覚えておいていただけると幸いです！
+
+ご清聴ありがとうございました。
