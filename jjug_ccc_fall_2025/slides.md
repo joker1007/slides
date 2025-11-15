@@ -565,14 +565,3 @@ GraphQLの口を生やして複数のユーザーセグメンテーション条�
 - https://quarkus.io/guides/cdi-reference
 - https://quarkus.io/guides/kafka-streams
 
----
-
-# Reproは開発者を募集中です
-
-ハイトラフィックをスピーディに捌くストリームアプリケーションに興味がある方。
-KafkaやQuarkusを使って開発してみたい方。
-最近はApache Icebergの検証・導入準備なんかもやってます。
-
-頭の片隅に覚えておいていただけると幸いです！
-
-ご清聴ありがとうございました。
