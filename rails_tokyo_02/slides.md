@@ -184,7 +184,10 @@ footer: ![w:100 h:32](logo_white.png)
 ---
 
 # Kaigi on Railsで登壇しました
-リンクと今回の話との関連・違いについて書く
+![height:300px](./kaigi_on_rails.png)
+https://speakerdeck.com/joker1007/jin-gai-meteservicekurasunituitekao-eru-arurailskai-fa-zhe-no10nian
+
+今回はもうちょっと個別の事例の話をします。
 
 ---
 
@@ -388,9 +391,9 @@ OpenTelemetryが洗練されてきて分散トレーシングを取得するの�
 
 ---
 
-# サービスマップとトレーシングの例
+# サービスマップの例
 
-画像を貼る
+![height:400px](./service_map.png)
 
 ---
 
