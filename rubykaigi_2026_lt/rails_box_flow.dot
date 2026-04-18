@@ -1,0 +1,60 @@
+digraph RailsBoxFlow {
+  graph [
+    bgcolor="#191724",
+    rankdir=LR,
+    fontname="Pier Sans",
+    fontcolor="#e0def4",
+    labelloc=t,
+    label="Rails on Ruby::Box  —  request flow across Box boundaries",
+    fontsize=22,
+    pad=0.4,
+    nodesep=1.6,
+    ranksep=0.45,
+    compound=true
+  ];
+
+  node [
+    shape=box, style="rounded,filled",
+    fontname="Pier Sans", fontsize=15,
+    color="#403d52", fontcolor="#e0def4",
+    margin="0.25,0.15"
+  ];
+  edge [
+    color="#ebbcba", fontcolor="#ebbcba",
+    fontname="Pier Sans", fontsize=13,
+    penwidth=2.0, arrowsize=1.0
+  ];
+
+  // Entry
+  request [label="HTTP Request", shape=oval, fillcolor="#31748f", fontcolor="#e0def4", color="#9ccfd8"];
+  response [label="HTTP Response", shape=oval, fillcolor="#31748f", fontcolor="#e0def4", color="#9ccfd8"];
+
+  // Box A
+  subgraph cluster_A {
+    label="Ruby::Box A  (optional)  —  domain / feature box";
+    fontcolor="#f6c177"; color="#f6c177"; style="rounded,dashed"; penwidth=2;
+
+    child_ctrl [label="class PostsController\l  < ApplicationController\ldef show\l  @post = Post.find(params[:id])\l  super   # ← delegate render\lend\l", fillcolor="#26233a"];
+    model [label="class Post < ApplicationRecord\ldef title_with_tags\l  # domain logic\l  ...\lend\l", fillcolor="#26233a"];
+  }
+
+  // Main Box
+  subgraph cluster_main {
+    label="Ruby::Box main  —  framework / shared box";
+    fontcolor="#9ccfd8"; color="#9ccfd8"; style="rounded,dashed"; penwidth=2;
+
+    app_ctrl [label="class ApplicationController\l  < ActionController::Base\ldef show\l  render :show   # view lookup\lend\l", fillcolor="#1f1d2e"];
+    view [label="app/views/posts/show.html.erb\l<%= @post.title_with_tags %>\l", fillcolor="#1f1d2e", shape=note];
+  }
+
+  // Flow
+  request   -> child_ctrl [label="① dispatch\n(routed to Box A)", color="#eb6f92", fontcolor="#eb6f92"];
+  child_ctrl -> model     [label="② call model\n(in Box A)", color="#c4a7e7", fontcolor="#c4a7e7"];
+  child_ctrl -> app_ctrl  [label="③ super\n(cross Box: A → main)", style=bold, constraint=false];
+  app_ctrl  -> view       [label="④ render"];
+  view      -> model      [label="⑤ method call\n(cross Box: main → A)", style=bold, color="#f6c177", fontcolor="#f6c177", constraint=false];
+  view      -> response   [label="⑥ respond", color="#eb6f92", fontcolor="#eb6f92"];
+
+  // Force app_ctrl to the same rank as child_ctrl (stack vertically, rankdir=LR)
+  request -> app_ctrl [style=invis];
+}

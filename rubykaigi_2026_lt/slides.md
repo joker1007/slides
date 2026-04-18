@@ -42,7 +42,7 @@ style: |
     }
     /* Common style */
     h1 {
-        font-size: 50pt;
+        font-size: 46pt;
         color: var(--rose);
         padding-bottom: 2mm;
         margin-bottom: 12mm;
@@ -66,7 +66,7 @@ style: |
         color: var(--iris);
     }
     p {
-        font-size: 24pt;
+        font-size: 28pt;
         font-weight: 600;
         color: var(--text);
     }
@@ -78,9 +78,11 @@ style: |
         color: var(--text);
     }
     ul {
+        font-size: 28pt;
         color: var(--subtle);
     }
     li {
+        font-size: 26pt;
         color: var(--subtle);
     }
     img {
@@ -165,9 +167,9 @@ footer: ![w:100 h:32](logo_white.png)
 # self.inspect
 
 - 橋立友宏 (@joker1007)
-- Repro株式会社 チーフアーキテクト
-- 元々はRailsエンジニアだったが、最近はJavaばかり書いている
-- 日本酒とクラフトビールが好き
+- Repro inc.
+- Chief Architect
+- I love 🍺, 🍶, and Karaoke
 
 ![bg right:40% height:320px](./icon.jpg)
 
@@ -181,7 +183,7 @@ footer: ![w:100 h:32](logo_white.png)
 
 # Ruby::Box comes!!
 
-It's very interesting!!
+It's very interesting feature!!
 
 ---
 
@@ -213,25 +215,67 @@ However, it required a few workarounds.
 
 ---
 
-# At first
+# Good parts (?) of Ruby::Box
 
-At this point, we need to apply a patch to zeitwerk
-Otherwise, if you run it with `RUBY_BOX=1`, it won't load `require` properly.
-
----
-
-# Hacks
-
-Ruby::Box instances can freely reference one another.
-In other words, a class in one box can be inherited by a class in another box.
+- Ruby::Box instances can freely reference one another.
+- In other words, a class in one box can be inherited by a class in another box.
+- Of course, you can also prepend or include modules in another box.
 
 ---
 
-# 図を出す
+# How it works
+
+There are 2 boxes.
+```ruby
+module BoxA
+  def foo
+    puts "BoxA" + Ruby::Box.current.inspect
+    super
+  end
+end
+```
+
+```ruby
+module BoxB
+  def foo = puts "BoxB" + Ruby::Box.current.inspect
+end
+```
 
 ---
 
-# Controller inheritance
+```ruby
+A = Ruby::Box.new; A.require_relative "box_a"
+B = Ruby::Box.new; A.require_relative "box_a"
+class Foo
+  prepend A::BoxA
+  include B::BoxB
+  def foo
+    puts "Main" + Ruby::Box.current.inspect
+    super
+  end
+end
+
+Foo.new.foo # =>
+```
+```
+returns:
+BoxA#<Ruby::Box:3,user,optional>
+Main#<Ruby::Box:2,user,main>
+BoxB#<Ruby::Box:4,user,optional>
+```
+
+---
+
+Just by calling `super` you can seamlessly switch between the Box.
+
+**dangerous (interesting)!!** 😄
+
+![bg right:45% height:700px](method_chain.png)
+
+
+---
+
+# Applying to Rails
 
 - A controller within a box inherits `ApplicationController` in the main box.
 - You can evaluate controller and model logic within the child box,
@@ -241,7 +285,23 @@ In other words, a class in one box can be inherited by a class in another box.
 
 ---
 
-# It's dangerous (interesting)!!
+![bg height:700px](rails_box_flow.png)
+
+---
+
+# Thank you tagomoris-san!!
+# Ruby::Box is fun!!
+
+---
+
+# What you need to get started
+
+For now, we need to apply a patch to zeitwerk
+we need to override `Ruby::Box#require` to work automatic module generation.
+Otherwise, if you run it with `RUBY_BOX=1`, it can't load rails components.
+
+This issue is related.
+https://bugs.ruby-lang.org/issues/21830
 
 ---
 
@@ -262,7 +322,8 @@ In other words, a class in one box can be inherited by a class in another box.
 # Things I want related to Ruby::Box
 
 - `require` doesn't crash
-- `Ruby::Box#fork`: A feature that allows you to create a box while retaining the LOADED_FEATURE that has already been required in the base box.
+- `Ruby::Box#name`: `Box#inspect` is confusing. I want to rename it to make it clearer.
+- `Ruby::Box#fork`: I want to create a box while retaining the LOADED_FEATURE that has already been required in the base box.
 
 ---
 
@@ -277,7 +338,7 @@ When you cross between boxes, it becomes unclear which box the `autoload` `requi
 
 Currently, it is possible to run Ruby::Box on Rails.
 However, it’s very minimal and very experimental.
-Still, the way Box works is really interesting!! I can sense its potential!!
+Still, the way Box works is really interesting!!
+I can sense its potential!!
 
 Let's try to use Ruby::Box and play around with it!!
-
