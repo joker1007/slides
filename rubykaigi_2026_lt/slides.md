@@ -342,3 +342,10 @@ Still, the way Box works is really interesting!!
 I can sense its potential!!
 
 Let's try to use Ruby::Box and play around with it!!
+
+---
+
+# For more details
+
+at the **松江Ruby会議**.
+Stay Tuned!!
