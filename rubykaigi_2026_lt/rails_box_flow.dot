@@ -34,7 +34,7 @@ digraph RailsBoxFlow {
     label="Ruby::Box A  (optional)  —  domain / feature box";
     fontcolor="#f6c177"; color="#f6c177"; style="rounded,dashed"; penwidth=2;
 
-    child_ctrl [label="class PostsController\l  < ApplicationController\ldef show\l  @post = Post.find(params[:id])\l  super   # ← delegate render\lend\l", fillcolor="#26233a"];
+    child_ctrl [label="class PostsController\l  < ApplicationController\ldef show\l  @post = Post.find(params[:id])\lend\l", fillcolor="#26233a"];
     model [label="class Post < ApplicationRecord\ldef title_with_tags\l  # domain logic\l  ...\lend\l", fillcolor="#26233a"];
   }
 
@@ -43,7 +43,7 @@ digraph RailsBoxFlow {
     label="Ruby::Box main  —  framework / shared box";
     fontcolor="#9ccfd8"; color="#9ccfd8"; style="rounded,dashed"; penwidth=2;
 
-    app_ctrl [label="class ApplicationController\l  < ActionController::Base\ldef show\l  render :show   # view lookup\lend\l", fillcolor="#1f1d2e"];
+    app_ctrl [label="class ApplicationController\l  < ActionController::Base\l# view lookup\lend\l", fillcolor="#1f1d2e"];
     view [label="app/views/posts/show.html.erb\l<%= @post.title_with_tags %>\l", fillcolor="#1f1d2e", shape=note];
   }
 

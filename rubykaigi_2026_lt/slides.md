@@ -221,6 +221,8 @@ However, it required a few workarounds.
 - In other words, a class in one box can be inherited by a class in another box.
 - Of course, you can also prepend or include modules in another box.
 
+see. [Ruby::Box ダイジェスト紹介（Ruby 4.0.0 新機能） - STORES Product Blog](https://product.st.inc/entry/2025/12/25/134453)
+
 ---
 
 # How it works
@@ -272,6 +274,8 @@ Just by calling `super` you can seamlessly switch between the Box.
 
 ![bg right:45% height:700px](method_chain.png)
 
+By the way, tagomoris-san said.
+![tagomoris](./tagomoris.png)
 
 ---
 
@@ -309,13 +313,14 @@ https://bugs.ruby-lang.org/issues/21830
 
 ---
 
-# It crashes right now :cry:
+# It crashes for now :cry:
 
 `require` fails to execute in the first place.
 
 ---
 
 # Actually, this demo app crashes with a SEGV quite often when it starts up.
+# I recommend ruby-4.0.2 to run this sample.
 
 ---
 
