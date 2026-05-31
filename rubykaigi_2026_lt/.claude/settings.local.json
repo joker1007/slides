@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dot -Tpng -Gdpi=180 method_chain.dot -o method_chain.png)",
+      "Bash(dot -Tpng -Gdpi=180 rails_box_flow.dot -o rails_box_flow.png)"
+    ]
+  }
+}

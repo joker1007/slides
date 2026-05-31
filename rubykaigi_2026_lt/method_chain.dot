@@ -1,0 +1,56 @@
+digraph MethodChain {
+  graph [
+    bgcolor="#191724",
+    rankdir=TB,
+    fontname="Pier Sans",
+    fontcolor="#e0def4",
+    labelloc=t,
+    label="Foo.new.foo  — method lookup chain across Ruby::Box",
+    fontsize=22,
+    pad=0.4,
+    nodesep=0.5,
+    ranksep=0.7,
+    compound=true
+  ];
+
+  node [
+    shape=box, style="rounded,filled",
+    fontname="Pier Sans", fontsize=16,
+    color="#403d52", fontcolor="#e0def4",
+    margin="0.25,0.15"
+  ];
+  edge [
+    color="#ebbcba", fontcolor="#ebbcba",
+    fontname="Pier Sans", fontsize=14,
+    penwidth=2.0, arrowsize=1.0
+  ];
+
+  // Box A (optional)
+  subgraph cluster_A {
+    label="Ruby::Box A  (optional)";
+    fontcolor="#f6c177"; color="#f6c177"; style="rounded,dashed"; penwidth=2;
+    boxA [label="module A::BoxA\ldef foo\l  puts \"BoxA\" + Box.current\l  super\lend\l", fillcolor="#26233a"];
+  }
+
+  // Box main
+  subgraph cluster_main {
+    label="Ruby::Box main";
+    fontcolor="#9ccfd8"; color="#9ccfd8"; style="rounded,dashed"; penwidth=2;
+    foo [label="class Foo\ldef foo\l  puts \"Main\" + Box.current\lend\l", fillcolor="#1f1d2e"];
+  }
+
+  // Box B (optional)
+  subgraph cluster_B {
+    label="Ruby::Box B  (optional)";
+    fontcolor="#c4a7e7"; color="#c4a7e7"; style="rounded,dashed"; penwidth=2;
+    boxB [label="module B::BoxB\ldef foo\l  puts \"BoxB\" + Box.current\lend\l", fillcolor="#26233a"];
+  }
+
+  // Entry point
+  entry [label="Foo.new.foo", shape=oval, fillcolor="#31748f", fontcolor="#e0def4", color="#9ccfd8"];
+
+  // Lookup chain (prepend -> self -> include)
+  entry -> boxA [label="① dispatch\n(prepend: A::BoxA)", color="#eb6f92", fontcolor="#eb6f92"];
+  boxA  -> foo  [label="② super\n(cross Box: A → main)", style=bold];
+  foo   -> boxB [label="③ super\n(cross Box: main → B)", style=bold];
+}
