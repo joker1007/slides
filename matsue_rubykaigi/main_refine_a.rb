@@ -1,4 +1,4 @@
 require_relative "./refine_a"
 
 using RefineA
-puts "Hello, " | "world!" #=> "Hello, world!"
+puts "Hello, " | "world!"

@@ -1,9 +1,15 @@
 require_relative './bar'
 
 module RefineB
+  refine String do
+    def |(other)
+      self + other
+    end
+  end
+
   refine Foo do
     def foo(other)
-      "foo_refine: " + other
+      "foo_refine: " | other
     end
 
     def foo2

@@ -160,10 +160,6 @@ h1, h2, h3 {
 
 ---
 
-<!--
-footer: ![w:100 h:32](logo_white.png)
--->
-
 # self.inspect
 
 - 橋立友宏 (@joker1007)
@@ -217,7 +213,7 @@ Boxの中でオープンクラスすると定義が複製されて、そこで�
 
 # Ruby::Boxで何が嬉しいのか
 
-完全に同一の名前のクラスやメソッドを複数個持てる様になる。
+同一の名前のクラスやメソッドを複数個持てる様になる。
 
 開発当初から想定されていたユースケースとして、同一gemの複数バージョンを1つのプロセスで動かしたりできる様になる。
 
@@ -237,11 +233,9 @@ Boxの中でオープンクラスすると定義が複製されて、そこで�
 
 例えば、同じUserというActiveRecordのモデルでもコンテキストに依って必要なメソッドは変わる。
 
-モジュールやファイルの分割で意図を分けたとしても、参照可能であるなら意図しない使い方をされる可能性はある。
+モジュールやファイルの分割で意図を分けたとしても、参照可能であるなら意図しない使い方をされる可能性はある。コンテキスト境界を明確に意識するのは大規模な開発プロジェクトでは重要。
 
-コンテキスト境界を明確に意識するのは大規模な開発プロジェクトでは重要。
-
-そもそもメソッドもクラスも見えない、という状況なら境界を越えるのに明確な意志を要求できるし、意図しない変更範囲の波及も防止できる。
+そもそもメソッドもクラスも見えない、という状況なら境界を越えるのに明確な意志を要求できるし、意図しない変更範囲の波及も防止できるかもしれない。
 
 ---
 
@@ -272,9 +266,8 @@ end
 
 ---
 
-それぞれのBoxでモジュールを読み込んだ後、それをメインBoxのクラスにinclude/prependする。
-
 ```ruby
+# Boxで定義されたモジュールをinclude/prependする
 A = Ruby::Box.new; A.require_relative "box_a"
 B = Ruby::Box.new; A.require_relative "box_a"
 class Foo
@@ -333,8 +326,8 @@ puts "hoge".foo # => "#foo: hoge"
 # Refinementsの仕組み
 
 `refine`を呼ぶと、Refinements用の特殊なモジュールが生成され、defはそのモジュールに登録される。
-`using`を呼ぶと、現在のスコープにRefinements用のモジュールが登録されメソッドエントリが置き換えられる。
-この時メソッドキャッシュがクリアされたり、呼び出し時にスコープからRefinementsモジュールを探索する処理が入るのでパフォーマンスには影響がある。
+`using`を呼ぶと、現在のスコープにRefinements用のモジュールが登録されメソッドエントリがrefine用のラッパーに置き換えられる。
+この時メソッドキャッシュがクリアされたり、呼び出し時にRefinementsモジュールを探索する処理が入るのでパフォーマンスには影響がある。
 
 (To-Shugoさん: これ合ってます？)
 
@@ -346,6 +339,336 @@ puts "hoge".foo # => "#foo: hoge"
 
 ---
 
+# Refinementsにおける組込みクラス
 
+```ruby
+module RefineA
+  refine String do
+    def |(other)
+      self + other
+    end
+  end
+end
+```
+
+```ruby
+require_relative "./refine_a"
+
+using RefineA
+puts "Hello, " | "world!"
+```
+
+```
+"Hello, world!"
+```
+
+---
+
+# Boxにおける組込みクラス
+
+```ruby
+class String
+  def |(other)
+    self + other
+  end
+end
+```
+
+```ruby
+BoxA = Ruby::Box.new
+BoxA.require_relative "./box_a"
+
+a = BoxA::String.new
+a << "Hello, "
+puts a | "world!"
+```
+
+```
+どうなるでしょうか?
+```
+
+---
+
+# Boxにおける組込みクラス(正解)
+
+```ruby
+class String
+  def |(other)
+    self + other
+  end
+end
+```
+
+```ruby
+BoxA = Ruby::Box.new
+BoxA.require_relative "./box_a"
+
+a = BoxA::String.new
+a << "Hello, "
+puts a | "world!"
+```
+
+```
+NoMethodError
+```
+
+---
+
+# Boxは組込みクラスが特別扱いされている。
+
+---
+
+# これなら大丈夫
+
+
+```ruby
+class Foo
+  def foo
+    "Hello, " | "foo!"
+  end
+end
+```
+
+```ruby
+BoxA = Ruby::Box.new
+BoxA.require_relative "./box_a"
+
+a = BoxA::Foo.new
+puts a.foo
+```
+
+```
+"Hello, foo!"
+```
+
+---
+
+# Refinementsの影響範囲
+
+```ruby
+# refine_b.rb
+require_relative './bar'
+
+module RefineB
+  refine String do
+    def |(other)
+      self + other
+    end
+  end
+  refine Foo do
+    def foo(other)
+      "foo_refine: " | other
+    end
+    def foo2
+      Bar.new.bar(self)
+    end
+  end
+end
+```
+
+---
+
+```ruby
+# bar.rb
+class Bar
+  def bar(foo)
+    foo.foo("bar")
+  end
+end
+```
+
+---
+
+```ruby
+# main.rb
+class Foo
+end
+
+require_relative './refine_b'
+using RefineB
+
+p Foo.new.foo("refine_b")
+p Foo.new.foo2
+```
+
+```
+"foo_refine: refine_b"
+/home/joker/ghq/github.com/joker1007/slides/matsue_rubykaigi/bar.rb:3:in
+'Bar#bar': undefined method 'foo' for an instance of Foo (NoMethodError)
+
+    foo.foo("bar")
+       ^^^^
+        from /home/joker/ghq/github.com/joker1007/slides/matsue_rubykaigi/refine_b.rb:16:in 'foo2'
+        from main_refine_b.rb:8:in '<main>'
+```
+
+---
+
+# Refinementsはファイルスコープというちょっと変わったスコープに制限されている。
+# refineされたメソッドの中で呼ぼうがusingしている場所から呼ぼうが、別ファイル上で評価されたらrefineされたメソッドは見つからない。
+
+---
+
+# 一方Ruby::Boxは
+
+```ruby
+require_relative './bar'
+
+class String
+  def |(other)
+    self + other
+  end
+end
+
+class Foo < Ruby::Box.main::Foo
+  def foo(other)
+    "foo_box:" + other
+  end
+
+  def foo2
+    Bar.new.bar(self)
+  end
+end
+```
+
+---
+
+# 普通に呼べる
+
+```ruby
+class Foo
+end
+
+BoxB = Ruby::Box.new
+BoxB.require_relative './box_b'
+
+p BoxB::Foo.new.foo("box_b")
+p BoxB::Foo.new.foo2
+```
+
+```
+"foo_box:box_b"
+"foo_box:bar"
+```
+
+---
+
+# Refinementsの自由度
+
+usingはトップレベルか、class/module定義の中でしか呼べない。
+
+有効化に対してかなり厳しい制限が入っている。
+
+---
+
+# これはいける
+
+```ruby
+module RefineC
+  refine String do
+    def |(other)
+      self + other
+    end
+  end
+end
+class A
+  using RefineC
+  def fuga
+    p "fuga" | "piyo"
+  end
+end
+
+A.new.fuga # => "fugapiyo"
+p "hoge" | "bar" # => NoMethodError
+```
+
+---
+
+# これはダメ
+
+```ruby
+module RefineC
+  refine String do
+    def |(other)
+      self + other
+    end
+  end
+end
+
+def fuga
+  using RefineC
+  p "fuga" | "piyo"
+end
+
+fuga # => main.using is permitted only at toplevel
+```
+
+---
+
+# RefinementsとBoxは結構動きが違う
+
+Boxは一旦その世界で評価され出したら、明示的に他のBoxで作成したオブジェクトに対するメソッド呼び出しを行わない限り、ずっとそのBoxの中で評価される。
+
+一方で、Refinementsはclass/module内でusingしたら、そのclass定義を抜けたら他には一切影響を与えないし、refineされたメソッドを呼び出しても本当にそのrefineメソッドを定義している箇所とusingしている以外では一切影響を与えない。
+
+---
+
+# これはどっちが良いというものでもない。
+
+# 自分の感覚では、組込みクラスを上書きしてDSLを作ったりする用途ではRefinementsの方が嬉しいことが多い。
+
+---
+
+# Refinementsが良いケース
+
+rspec-parameterizedの例
+
+```ruby
+describe "plus" do
+  using RSpec::Parameterized::TableSyntax
+  where(:a, :b, :answer) do
+    1 | 2 | 3
+    5 | 8 | 13
+    0 | 0 | 0
+  end
+  with_them do
+    it "should do additions" do
+      expect(a + b).to eq answer
+    end
+  end
+end
+```
+
+---
+
+# 何故Boxだと厳しいのか
+
+`it`の中身はproductionコードを評価する。なのでここからの呼び出し先には影響して欲しくない。
+
+パラメーターの保持のために、DSL評価はRSpecのExampleGroupの中で行いたい。
+
+しかし、RSpecの呼び出しフローの中でExampleGroupとして動的にクラス定義される処理を特定のBoxに行わせるのは困難。
+
+---
+
+# Boxの良い点
+
+- 参照の自由度が高い
+  - あるBoxに所属しているインスタンスからのメソッド呼び出しが出来ればそれで良い
+- 一旦切り替わったら明示的に他のBoxのメソッドを呼ばない限りは基本的にその世界のまま
+  - 自分が紹介したみたいに継承チェーンにぶち込むと暗黙的に切り替えたりできるけど。
+- クラスレベルの変数も影響範囲を限定できる
+
+---
+
+# Boxが嬉しいケース
+
+(まだ現実として試せていないので、あくまで妄想)
+
+- モジュラーモノリスの様にURLごとに世界を分ける
+- プラグインシステムの依存関係を閉じ込める
+- Feature ToggleやCanary ReleaseをBoxの切り替えで行う
+- 動的なSandbox実装
+- 特定の範囲内だけ有効なmethod_added
 
 ---
