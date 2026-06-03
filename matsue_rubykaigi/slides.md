@@ -42,7 +42,7 @@ style: |
     }
     /* Common style */
     h1 {
-        font-size: 46pt;
+        font-size: 40pt;
         color: var(--rose);
         padding-bottom: 2mm;
         margin-bottom: 12mm;
@@ -66,7 +66,7 @@ style: |
         color: var(--iris);
     }
     p {
-        font-size: 28pt;
+        font-size: 24pt;
         font-weight: 600;
         color: var(--text);
     }
@@ -308,7 +308,7 @@ BoxB#<Ruby::Box:4,user,optional>
 
 ---
 
-# Example
+# 使ったことない人のための例
 
 ```ruby
 module StringRefinement
@@ -424,6 +424,7 @@ NoMethodError
 
 
 ```ruby
+# ...さっきのStringの定義...
 class Foo
   def foo
     "Hello, " | "foo!"
@@ -611,7 +612,7 @@ fuga # => main.using is permitted only at toplevel
 
 Boxは一旦その世界で評価され出したら、明示的に他のBoxで作成したオブジェクトに対するメソッド呼び出しを行わない限り、ずっとそのBoxの中で評価される。
 
-一方で、Refinementsはclass/module内でusingしたら、そのclass定義を抜けたら他には一切影響を与えないし、refineされたメソッドを呼び出しても本当にそのrefineメソッドを定義している箇所とusingしている以外では一切影響を与えない。
+一方で、Refinementsはclass/module内でusingしたら、そのclass定義を抜けたら他には一切影響を与えない。refineされたメソッドを呼び出しても本当にそのrefineメソッドを定義したりusingしている箇所以外では一切影響を与えない。
 
 ---
 
@@ -671,7 +672,6 @@ end
 - プラグインシステムの依存関係を閉じ込める
 - Feature ToggleやCanary ReleaseをBoxの切り替えで行う
 - 動的なSandbox実装
-- 特定の範囲内だけ有効なmethod_added
 
 ---
 
@@ -682,7 +682,7 @@ end
 - Refinementsは本当にワンシチュエーションの書き換えだが、Boxは世界の分離というイメージ
 
 つまり、Refinementsは必要だしProcレベルのRefinementsがあるともっと嬉しい！
-そして、妄想ベースだがBoxは構成パターンが上手く見出せれば、Boxは実用的に便利な機能になる可能性があると思う。
+そして、妄想ベースだがBoxは構成パターンが上手く見出せれば、実用的に便利な機能になる可能性があると思う。
 
 ---
 
@@ -700,6 +700,8 @@ end
 
 別のBoxで作ったprocを持ち回れば、任意のタイミングでそのBoxに処理を切り替えることができる。
 但し、定義場所が分離されてしまうし、事前定義になるのでコード的には余りカッコ良くない。
+後、このインスタンスはどっちだ？みたいなのが非常に分かりにくくなる。
+何が嬉しいは分からんw
 
 ---
 
@@ -707,6 +709,25 @@ end
 
 BoxAに定義されているクラスに対して、BoxBで実行中の処理の中でclass_evalやdefine_methodを使ってメソッドを定義すると、BoxAに定義されているクラスにBoxBで実行されるメソッドを混在させられる。
 つまり、あるメソッドからは見えるけど、あるメソッドからは見えない、みたいな状況を作れる。
+原理的にはinclude/prependと一緒だが、もっと細かい粒度でできる。
 何が嬉しいかは分からんw
+
+---
+
+# 余談その4
+
+そもそも、Delegator(Decorator)を使ってwrapしてしまえばもっと分かり易い気がする。
+decorator自身に定義されているメソッドからしか見えない・外部に影響を与えない・名前が衝突できるヘルパーとか作れる気がする。
+割と使えるパターンかもしれない。
+
+---
+
+# 余談その5
+
+TracePointのbindingを使えば、どのBoxに対する呼び出しが行われているかや、どのBoxで定義されたクラスかを収集できる。
+何が嬉しいかは分からんw
+
+---
+
 
 ---
