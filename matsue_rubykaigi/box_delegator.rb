@@ -18,4 +18,8 @@ class FooWrapper < Delegator
   def box_foo
     "Hello, " | "foo"
   end
+
+  def str_concat
+    str | "hogehoge"
+  end
 end
