@@ -25,12 +25,15 @@ JJUG CCC Fall 2026
 ![bg right:40%](./icon.jpg)
 
 ---
+<!-- _class: lead -->
 
-# Asakusaから来た
+# Asakusaから来ました
 
-活動中のRubyコミュニティで日本最古
+浅草在住
 
-![bg right:48%](./asakusarb.png)
+Asakusa.rbという活動中のRubyコミュニティで日本最古のコミュニティによく参加しています
+
+![bg contain opacity:0.3](./asakusarb.png)
 
 ---
 
@@ -52,6 +55,8 @@ JJUG CCC Fall 2026
 
 大量の行動ログとユーザー属性をKafkaで受け取り、ストリーム処理している。
 
+かなりの規模のデータを出来るだけリアルタイムに分析・フィルタする需要がある。
+
 <!-- この辺までは前回のJJUG CCCの資料とほぼ同じ -->
 
 ---
@@ -62,12 +67,12 @@ JJUG CCC Fall 2026
 
 - Kafka / Kafka Streams
 - Iceberg
-- Apache Arrow
+- Apache Arrow / Arrow Flight SQL
 - DuckDB
-- Arrow Flight SQL
 - Trino
 
-この辺りの技術要素について話す。気になったらこの辺りの名前でググったりお手元のAI Agentに聞いてみて欲しい。
+この辺りの技術要素について話す。  
+気になったらこの辺りの名前でググったりお手元のAI Agentに聞いてみて欲しい。
 
 ---
 
@@ -116,6 +121,55 @@ graph LR
   style EX fill:none,stroke:#4a9eff,stroke-width:3px,color:#4a9eff
   style NEW fill:none,stroke:#ff5c5c,stroke-width:3px,color:#ff5c5c
 ```
+
+---
+<!-- _class: lead -->
+
+# 先に稼動実績の紹介
+
+productionで稼動済み
+あるテーブルのデータ規模やクエリ実績について紹介する
+
+---
+
+# 1テーブルのデータ量
+
+| 項目 | StreamHouse (Arrow) | Iceberg |
+|---|---|---|
+| 保持範囲 | 直近 2h（最大 2h15m、15分セグメント） | 全期間 |
+| 行数 | p50 7,600万 / 平均 1.16億 / 最大 3.02億 | 259.6億 |
+| サイズ | — | 340 GB（Parquet） |
+
+---
+
+# 書き込みペース
+
+| 項目 | StreamHouse (Arrow) | Iceberg (Spark Streaming) |
+|---|---|---|
+| 書き込みレート | 右に同じ | p50 1.44万 行/s / p95 5.2万 行/s |
+| 1時間あたり | 平均 5,200万 行 / 最大 1.92億 行 | — |
+| バッチ所要時間 | — | p50 14.0分 / p95 21.6分（trigger 間隔 約30分） |
+
+
+---
+
+# クエリ時間
+
+| Trino の入力行数 | 入力行数の中央値 | 入力量の中央値 | wall p50 | wall p90 | wall p99 |
+|---|---|---|---|---|---|
+| 100万〜1,000万 | 580万 | 0.04 GB | 3.0s | 8.6s | 209.6s |
+| 1,000万〜1億 | 4,070万 | 0.36 GB | 3.5s | 14.3s | 271.9s |
+| 1億〜10億 | 2.86億 | 2.29 GB | 6.2s | 43.6s | 363.9s |
+| 10億以上 | 14.0億 | 11.63 GB | 13.3s | 81.6s | 264.8s |
+
+例外的に遅いケースはあるが、2億件を対象にしてクエリするのに大体10秒ぐらい。
+10億を越えても1分かからない程度で返ってくることが期待できる。
+
+---
+<!-- _class: lead -->
+
+# この規模のデータを1分以内の鮮度でクエリできる
+悪くない基盤が構築できたと思う
 
 ---
 
