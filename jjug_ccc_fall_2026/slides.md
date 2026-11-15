@@ -71,8 +71,8 @@ Asakusa.rbという活動中のRubyコミュニティで日本最古のコミュ
 - DuckDB
 - Trino
 
-この辺りの技術要素について話す。  
-気になったらこの辺りの名前でググったりお手元のAI Agentに聞いてみて欲しい。
+これらの技術要素について話す。  
+気になったらこの辺の名前でググったりお手元のAI Agentに聞いてみて欲しい。
 
 ---
 
@@ -157,13 +157,12 @@ productionで稼動済み
 
 | Trino の入力行数 | 入力行数の中央値 | 入力量の中央値 | wall p50 | wall p90 | wall p99 |
 |---|---|---|---|---|---|
-| 100万〜1,000万 | 580万 | 0.04 GB | 3.0s | 8.6s | 209.6s |
 | 1,000万〜1億 | 4,070万 | 0.36 GB | 3.5s | 14.3s | 271.9s |
 | 1億〜10億 | 2.86億 | 2.29 GB | 6.2s | 43.6s | 363.9s |
 | 10億以上 | 14.0億 | 11.63 GB | 13.3s | 81.6s | 264.8s |
 
-例外的に遅いケースはあるが、2億件を対象にしてクエリするのに大体10秒ぐらい。
-10億を越えても1分かからない程度で返ってくることが期待できる。
+他のストレージも参照しているので遅いケースはあるが、2億件を対象にしてクエリするのに大体10秒ぐらい。
+10億を越えても1分前後で返ってくることが期待できる。
 
 <!-- 他のデータストアも参照していてこの基盤だけにクエリしている訳ではない  -->
 
@@ -380,7 +379,8 @@ events.writeStream()
 - コミットのたびにスナップショットと小さなファイルが増える
 - 間隔を短くするほど、コンパクションとメタデータ整理の負荷が上がる
 - Sparkジョブ自体の起動と実行にも時間がかかる
-- ピーク時に秒間5万行の書き込み量を、IcebergにMERGEでUPSERTするとコミット間隔はどうやっても15分程度になる。
+- ピーク時に秒間5万行の書き込み量を、IcebergにMERGEでUPSERTするとコミットにどうやっても15分程度かかる
+- トリガー間隔は必然的に30分前後必要で、トリガー前のデータはIcebergに届かない
 
 当然Icebergに書かれるまでの間のデータはクエリできない。  
 しかし、機能的な要求は1分程度のリードタイムで分析できること。  
@@ -630,7 +630,7 @@ changelogを最初から再生すると、復元に時間がかかる。
 - standbyタスクはメモリにArrowを持たず、ファイルだけを更新する
 - standbyがactiveに昇格したら、ファイルをメモリに展開する
 
-Kafka Streamsは定期的に呼び出されるcommitのタイミングで `flush()` が呼ばれ、その後にcheckpointを書くので、`flush()` でファイルを `fsync` する。
+Kafka Streamsでは定期的に呼び出されるcommitのタイミングで `flush()` が呼ばれ、その後にcheckpointを書くので、`flush()` でファイルを `fsync` する。
 
 ---
 
@@ -1028,6 +1028,21 @@ public SourcePage getNextSourcePage() {
 精度やタイムゾーンの有無で分岐が増える。ネストした型にはまだ対応していない。
 
 ---
+
+# 最後の工程としてIcebergとUNIONする
+
+```sql
+CREATE VIEW analytics.event_counters_per_day_all AS
+SELECT * FROM iceberg.analytics.event_counters_per_day
+UNION ALL
+SELECT * FROM flight_sql.main.event_counters_per_day;
+```
+
+- streamhouseのテーブル名はIcebergのテーブル名と同じにしてある
+- 利用者はViewにクエリするだけで、直近のデータまで含めた結果が得られる
+- 実際には重なる期間の扱いや重複除外とかが必要で、もうちょっとクエリは複雑
+
+---
 <!-- _class: lead -->
 
 # クッソ大変
@@ -1071,22 +1086,6 @@ Fableが登場した辺りで、いけそうだなと思い、実際にやって
 
 ---
 
-# 最後の工程としてIcebergとUNIONする
-
-```sql
-CREATE VIEW analytics.event_counters_per_day_all AS
-SELECT * FROM iceberg.analytics.event_counters_per_day
-UNION ALL
-SELECT * FROM flight_sql.main.event_counters_per_day;
-```
-
-- streamhouseのテーブル名はIcebergのテーブル名と同じにしてある
-- 利用者はViewにクエリするだけで、直近のデータまで含めた結果が得られる
-
-<!-- 実際には重なる期間の扱いとかでもうちょっとクエリは複雑 -->
-
----
-
 # 全体をもう一度
 
 ```mermaid
@@ -1098,6 +1097,8 @@ graph LR
   SH -->|Flight SQL| T
   T --> U[分析クエリ]
 ```
+
+IcebergとApache Arrowを組み合わせて、1分程度のリードタイムで分析可能なデータウェアハウスを構築した。
 
 ---
 
