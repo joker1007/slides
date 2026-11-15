@@ -165,6 +165,8 @@ productionで稼動済み
 例外的に遅いケースはあるが、2億件を対象にしてクエリするのに大体10秒ぐらい。
 10億を越えても1分かからない程度で返ってくることが期待できる。
 
+<!-- 他のデータストアも参照していてこの基盤だけにクエリしている訳ではない  -->
+
 ---
 <!-- _class: lead -->
 
@@ -334,8 +336,6 @@ ALTER TABLE prod.db.user_profiles SET TBLPROPERTIES (
 - 削除情報が溜まると読み込みが遅くなる
 - 定期的なコンパクションでデータファイルに反映する
 
-<!-- TODO: Reproでの実際の設定(v2のdelete fileかv3のdeletion vectorか、コンパクションの頻度)に合わせて書き直す -->
-
 ---
 
 # Sparkでの書き込み
@@ -352,7 +352,6 @@ WHEN NOT MATCHED THEN INSERT *;
 
 IcebergのSpark拡張がこのSQLを解釈し、テーブルの設定に従ってCopy on WriteかMerge on Readで書き込む。
 
-<!-- TODO: Reproで実際に動かしているSparkジョブの形(バッチかStructured Streamingか、実行間隔)を確認して差し替える -->
 
 ---
 
