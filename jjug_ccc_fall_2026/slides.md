@@ -31,7 +31,8 @@ JJUG CCC Fall 2026
 
 浅草在住
 
-Asakusa.rbという活動中のRubyコミュニティで日本最古のコミュニティによく参加しています
+Asakusa.rbという  
+現存する日本最古のRubyコミュニティ
 
 ![bg contain opacity:0.3](./asakusarb.png)
 
@@ -97,7 +98,7 @@ graph LR
 
 ---
 
-# Arrowに分散クエリ可能にするものが世の中に全然無い
+# Arrowに分散クエリを可能にするものが世の中に全然無い
 
 - spark -> Icebergは既によくある構成
 - Arrowを上手く分散配置して蓄積したり、Trinoから複数のデータストアと組み合わせて透過的にクエリできる仕組みは世の中に無い
@@ -121,6 +122,18 @@ graph LR
   style EX fill:none,stroke:#4a9eff,stroke-width:3px,color:#4a9eff
   style NEW fill:none,stroke:#ff5c5c,stroke-width:3px,color:#ff5c5c
 ```
+
+---
+
+# 近しいものはあるが……
+
+世の中にそういう需要自体はあって、Apache Flussというリアルタイム分析を目的とするストリーミングストレージというものがある。
+
+https://fluss.apache.org/docs/
+
+かなり近いのだが、大仰であるのと現状Trinoに対応していないのが要件に合わない。
+
+概念やネーミングは参考にさせてもらった。
 
 ---
 <!-- _class: lead -->
@@ -1050,13 +1063,16 @@ SELECT * FROM flight_sql.main.event_counters_per_day;
 
 やってられるか、という感じ
 
+一つ一つは大したコード量じゃなくても  
+何が何を担当しているかが非常にややこしい
+
 ---
 
 <!-- _class: lead -->
 
-## ジェバンニ(Fable)が
-## 一晩でやってくれました
-マジか……って感じだけど出来てしまった
+# ジェバンニ(Fable)が
+# 一晩でやってくれました
+マジか……って感じだったが出来てしまった
 
 ---
 
@@ -1106,10 +1122,10 @@ IcebergとApache Arrowを組み合わせて、1分程度のリードタイムで
 
 - Icebergは透過的パーティショニングとMerge on Readで扱いやすいが、書き込みの間隔より新しいデータは見えない
 - 直近のデータをArrowでメモリに持ち、Kafka StreamsのカスタムStateStoreにすることでオンメモリの柔軟さと耐障害性を両立
-- DuckDBとFlight SQLを組み込むと、クエリエンジンとプロトコルを自作せずにSQLを受け付けられる
-- Trinoのコネクタは作るものが多いが、SPIに沿って埋めていけば動く
-- 参考実装は豊富なので今ならAI Agentが上手くやってくれる
 - Arrowのゼロコピーと無変換はハイパフォーマンス要求に有効
+- DuckDBとFlight SQLを組み込むと、クエリエンジンとプロトコルを自作せずにSQLを受け付けられる
+- Trinoのコネクタは作るものが多いが参考実装は豊富なので今ならAI Agentが上手くやってくれる
+- Fableさん，**「心底(マジ)感謝(アザ)ッス」**。
 
 ---
 
